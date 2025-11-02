@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generative Music 3D Visualization</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: #000;
+            color: #fff;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        #info-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 100;
+            min-width: 280px;
+        }
+
+        #info-panel h1 {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #00ffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.connected {
+            background: #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+        }
+
+        .status-indicator.disconnected {
+            background: #ff0000;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .note-info {
+            margin: 8px 0;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .note-info span {
+            color: #00ffff;
+            font-weight: bold;
+        }
+
+        #stats {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            font-size: 13px;
+        }
+
+        .stat-label {
+            color: #888;
+        }
+
+        .stat-value {
+            color: #00ffff;
+            font-weight: bold;
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 100;
+        }
+
+        .control-row {
+            margin: 10px 0;
+        }
+
+        .control-row label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #888;
+        }
+
+        input[type="range"] {
+            width: 200px;
+        }
+
+        button {
+            background: rgba(0, 255, 255, 0.2);
+            border: 1px solid #00ffff;
+            color: #00ffff;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: rgba(0, 255, 255, 0.4);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
+
+        #legend {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 100;
+        }
+
+        #legend h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #00ffff;
+        }
+
+        .legend-item {
+            margin: 8px 0;
+            font-size: 12px;
+        }
+
+        .legend-color {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div id="info-panel">
+        <h1>🎵 Music Visualization</h1>
+        <div class="status">
+            <div class="status-indicator disconnected" id="status-indicator"></div>
+            <span id="status-text">Connecting...</span>
+        </div>
+        <div class="note-info" id="latest-note">
+            Waiting for notes...
+        </div>
+        <div id="stats">
+            <div class="stat-row">
+                <span class="stat-label">Total Notes:</span>
+                <span class="stat-value" id="note-count">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Particles:</span>
+                <span class="stat-value" id="particle-count">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">FPS:</span>
+                <span class="stat-value" id="fps">0</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="controls">
+        <div class="control-row">
+            <label>Rotation Speed</label>
+            <input type="range" id="rotation-speed" min="0" max="100" value="30">
+        </div>
+        <div class="control-row">
+            <label>Trail Length</label>
+            <input type="range" id="trail-length" min="10" max="200" value="100">
+        </div>
+        <div class="control-row">
+            <label>Particle Density</label>
+            <input type="range" id="particle-density" min="100" max="2000" value="500">
+        </div>
+        <div class="control-row">
+            <button id="clear-btn">Clear Visualization</button>
+        </div>
+    </div>
+
+    <div id="legend">
+        <h3>Mapping Legend</h3>
+        <div class="legend-item">
+            <span style="color: #ff6b6b;">X axis:</span> Pitch (0-127)
+        </div>
+        <div class="legend-item">
+            <span style="color: #4ecdc4;">Y axis:</span> Duration (0-2s)
+        </div>
+        <div class="legend-item">
+            <span style="color: #95e1d3;">Z axis:</span> Step/Timing
+        </div>
+        <div class="legend-item" style="margin-top: 10px;">
+            <div class="legend-color" style="background: linear-gradient(90deg, #ff0000, #00ff00, #0000ff);"></div>
+            Color: Velocity
+        </div>
+    </div>
+
+    <!-- Three.js from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        // ==================== Configuration ====================
+        const CONFIG = {
+            websocketUrl: 'ws://localhost:8765',
+            reconnectInterval: 3000,
+            maxTrailLength: 100,
+            particleCount: 500,
+            rotationSpeed: 0.003,
+            noteScale: 0.3,
+            spaceScale: {
+                pitch: 0.15,  // X: pitch (0-127) → ~(-10 to 10)
+                duration: 10,  // Y: duration (0-2) → (0 to 20)
+                step: 8        // Z: step timing
+            }
+        };
+
+        // ==================== Scene Setup ====================
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000510);
+        scene.fog = new THREE.FogExp2(0x000510, 0.015);
+
+        const camera = new THREE.PerspectiveCamera(
+            75,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            1000
+        );
+        camera.position.set(0, 15, 30);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        // ==================== Lighting ====================
+        const ambientLight = new THREE.AmbientLight(0x404040, 1);
+        scene.add(ambientLight);
+
+        const pointLight1 = new THREE.PointLight(0x00ffff, 2, 100);
+        pointLight1.position.set(0, 20, 20);
+        scene.add(pointLight1);
+
+        const pointLight2 = new THREE.PointLight(0xff00ff, 1.5, 100);
+        pointLight2.position.set(-20, 10, -20);
+        scene.add(pointLight2);
+
+        // ==================== Particle System ====================
+        const particleGeometry = new THREE.BufferGeometry();
+        const particleCount = CONFIG.particleCount;
+        const particlePositions = new Float32Array(particleCount * 3);
+        const particleVelocities = [];
+
+        for (let i = 0; i < particleCount; i++) {
+            particlePositions[i * 3] = (Math.random() - 0.5) * 100;
+            particlePositions[i * 3 + 1] = (Math.random() - 0.5) * 100;
+            particlePositions[i * 3 + 2] = (Math.random() - 0.5) * 100;
+
+            particleVelocities.push({
+                x: (Math.random() - 0.5) * 0.02,
+                y: (Math.random() - 0.5) * 0.02,
+                z: (Math.random() - 0.5) * 0.02
+            });
+        }
+
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+
+        const particleMaterial = new THREE.PointsMaterial({
+            color: 0x4488ff,
+            size: 0.2,
+            transparent: true,
+            opacity: 0.6,
+            blending: THREE.AdditiveBlending
+        });
+
+        const particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+        scene.add(particleSystem);
+
+        // ==================== Note Visualization ====================
+        const notes = [];
+        const noteGroup = new THREE.Group();
+        scene.add(noteGroup);
+
+        function midiToPosition(pitch, step, duration) {
+            return new THREE.Vector3(
+                (pitch - 64) * CONFIG.spaceScale.pitch,  // Center around middle C (64)
+                duration * CONFIG.spaceScale.duration,
+                -step * CONFIG.spaceScale.step
+            );
+        }
+
+        function velocityToColor(velocity) {
+            // Map velocity (0-127) to color gradient (red -> yellow -> green -> cyan -> blue)
+            const normalized = velocity / 127;
+            const hue = normalized * 0.7; // 0 (red) to 0.7 (blue)
+            return new THREE.Color().setHSL(hue, 1.0, 0.5);
+        }
+
+        function addNote(noteData) {
+            const position = midiToPosition(noteData.pitch, noteData.step, noteData.duration);
+            const color = velocityToColor(noteData.velocity);
+
+            // Create note sphere
+            const geometry = new THREE.SphereGeometry(CONFIG.noteScale, 16, 16);
+            const material = new THREE.MeshPhongMaterial({
+                color: color,
+                emissive: color,
+                emissiveIntensity: 0.5,
+                shininess: 100
+            });
+
+            const noteSphere = new THREE.Mesh(geometry, material);
+            noteSphere.position.copy(position);
+
+            // Add glow effect
+            const glowGeometry = new THREE.SphereGeometry(CONFIG.noteScale * 1.5, 16, 16);
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: color,
+                transparent: true,
+                opacity: 0.3,
+                blending: THREE.AdditiveBlending
+            });
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            noteSphere.add(glow);
+
+            noteGroup.add(noteSphere);
+
+            // Draw line to previous note
+            if (notes.length > 0) {
+                const prevNote = notes[notes.length - 1];
+                const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+                    prevNote.position.clone(),
+                    position
+                ]);
+                const lineMaterial = new THREE.LineBasicMaterial({
+                    color: color,
+                    transparent: true,
+                    opacity: 0.6,
+                    linewidth: 2
+                });
+                const line = new THREE.Line(lineGeometry, lineMaterial);
+                noteGroup.add(line);
+
+                notes[notes.length - 1].line = line;
+            }
+
+            notes.push({
+                mesh: noteSphere,
+                position: position,
+                data: noteData
+            });
+
+            // Manage trail length
+            const maxLength = parseInt(document.getElementById('trail-length').value);
+            while (notes.length > maxLength) {
+                const oldNote = notes.shift();
+                noteGroup.remove(oldNote.mesh);
+                if (oldNote.line) {
+                    noteGroup.remove(oldNote.line);
+                }
+            }
+
+            // Update UI
+            document.getElementById('note-count').textContent = notes.length;
+            document.getElementById('latest-note').innerHTML = `
+                <span>${noteData.note_name}</span> |
+                Pitch: ${noteData.pitch} |
+                Duration: ${noteData.duration.toFixed(3)}s<br>
+                Velocity: ${noteData.velocity} |
+                Step: ${noteData.step.toFixed(3)}s
+            `;
+        }
+
+        function clearVisualization() {
+            while (notes.length > 0) {
+                const note = notes.shift();
+                noteGroup.remove(note.mesh);
+                if (note.line) {
+                    noteGroup.remove(note.line);
+                }
+            }
+            document.getElementById('note-count').textContent = '0';
+        }
+
+        // ==================== WebSocket Connection ====================
+        let ws = null;
+        let reconnectTimeout = null;
+
+        function connectWebSocket() {
+            try {
+                ws = new WebSocket(CONFIG.websocketUrl);
+
+                ws.onopen = () => {
+                    console.log('WebSocket connected');
+                    document.getElementById('status-indicator').className = 'status-indicator connected';
+                    document.getElementById('status-text').textContent = 'Connected';
+                    if (reconnectTimeout) {
+                        clearTimeout(reconnectTimeout);
+                        reconnectTimeout = null;
+                    }
+                };
+
+                ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'note') {
+                            addNote(data);
+                        }
+                    } catch (e) {
+                        console.error('Error parsing message:', e);
+                    }
+                };
+
+                ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                };
+
+                ws.onclose = () => {
+                    console.log('WebSocket disconnected');
+                    document.getElementById('status-indicator').className = 'status-indicator disconnected';
+                    document.getElementById('status-text').textContent = 'Disconnected - Reconnecting...';
+
+                    // Attempt to reconnect
+                    reconnectTimeout = setTimeout(() => {
+                        console.log('Attempting to reconnect...');
+                        connectWebSocket();
+                    }, CONFIG.reconnectInterval);
+                };
+            } catch (e) {
+                console.error('Failed to create WebSocket:', e);
+                document.getElementById('status-text').textContent = 'Connection failed - Retrying...';
+                reconnectTimeout = setTimeout(connectWebSocket, CONFIG.reconnectInterval);
+            }
+        }
+
+        // ==================== Animation Loop ====================
+        let lastTime = Date.now();
+        let frames = 0;
+        let fpsUpdateTime = Date.now();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const currentTime = Date.now();
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+
+            // Update FPS counter
+            frames++;
+            if (currentTime - fpsUpdateTime > 1000) {
+                document.getElementById('fps').textContent = frames;
+                frames = 0;
+                fpsUpdateTime = currentTime;
+            }
+
+            // Rotate scene
+            const rotationSpeed = parseFloat(document.getElementById('rotation-speed').value) / 10000;
+            noteGroup.rotation.y += rotationSpeed;
+
+            // Animate particles
+            const positions = particleSystem.geometry.attributes.position.array;
+            for (let i = 0; i < particleCount; i++) {
+                positions[i * 3] += particleVelocities[i].x;
+                positions[i * 3 + 1] += particleVelocities[i].y;
+                positions[i * 3 + 2] += particleVelocities[i].z;
+
+                // Boundary check - wrap around
+                if (Math.abs(positions[i * 3]) > 50) particleVelocities[i].x *= -1;
+                if (Math.abs(positions[i * 3 + 1]) > 50) particleVelocities[i].y *= -1;
+                if (Math.abs(positions[i * 3 + 2]) > 50) particleVelocities[i].z *= -1;
+            }
+            particleSystem.geometry.attributes.position.needsUpdate = true;
+
+            // Rotate particle system slowly
+            particleSystem.rotation.y += 0.0001;
+            particleSystem.rotation.x += 0.0002;
+
+            // Pulse lights
+            pointLight1.intensity = 2 + Math.sin(currentTime * 0.001) * 0.5;
+            pointLight2.intensity = 1.5 + Math.cos(currentTime * 0.0015) * 0.5;
+
+            renderer.render(scene, camera);
+        }
+
+        // ==================== Controls ====================
+        document.getElementById('particle-density').addEventListener('input', (e) => {
+            const newCount = parseInt(e.target.value);
+            // Note: For simplicity, we're just updating the display
+            // A full implementation would recreate the particle system
+            document.getElementById('particle-count').textContent = newCount;
+        });
+
+        document.getElementById('clear-btn').addEventListener('click', clearVisualization);
+
+        // ==================== Responsive Canvas ====================
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // ==================== Initialize ====================
+        document.getElementById('particle-count').textContent = particleCount;
+        connectWebSocket();
+        animate();
+
+        console.log('🎵 Music Visualization initialized');
+        console.log('Waiting for MIDI data from realtime_midi_generator.py...');
+    </script>
+</body>
+</html>
