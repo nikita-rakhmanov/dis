@@ -235,17 +235,21 @@
     <div id="legend">
         <h3>Mapping Legend</h3>
         <div class="legend-item">
-            <span style="color: #ff6b6b;">X axis:</span> Pitch (0-127)
+            <span style="color: #ff6b6b;">X axis:</span> Pitch (1 octave)
         </div>
         <div class="legend-item">
-            <span style="color: #4ecdc4;">Y axis:</span> Duration (0-2s)
+            <span style="color: #4ecdc4;">Y axis:</span> Duration
         </div>
         <div class="legend-item">
-            <span style="color: #95e1d3;">Z axis:</span> Step/Timing
+            <span style="color: #95e1d3;">Z axis:</span> Timing/Step
         </div>
         <div class="legend-item" style="margin-top: 10px;">
             <div class="legend-color" style="background: linear-gradient(90deg, #ff0000, #00ff00, #0000ff);"></div>
-            Color: Velocity
+            Color + Size: Velocity
+        </div>
+        <div class="legend-item" style="margin-top: 10px; font-size: 11px; color: #666;">
+            Spheres pulse and fade<br>
+            Camera orbits automatically
         </div>
     </div>
 
@@ -260,11 +264,11 @@
             maxTrailLength: 100,
             particleCount: 500,
             rotationSpeed: 0.003,
-            noteScale: 0.3,
+            noteScale: 0.8,  // Larger spheres for more dramatic effect
             spaceScale: {
-                pitch: 0.15,  // X: pitch (0-127) → ~(-10 to 10)
-                duration: 10,  // Y: duration (0-2) → (0 to 20)
-                step: 8        // Z: step timing
+                pitch: 2.5,   // DRAMATIC: For 1 octave (12 notes) → ~(-15 to 15)
+                duration: 20, // DRAMATIC: Duration (0-2s) → (0 to 40)
+                step: 15      // DRAMATIC: Z-axis depth for timing
             }
         };
 
@@ -279,8 +283,8 @@
             0.1,
             1000
         );
-        camera.position.set(0, 15, 30);
-        camera.lookAt(0, 0, 0);
+        camera.position.set(0, 15, 40);  // Start further back for better view
+        camera.lookAt(0, 10, 0);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -354,54 +358,74 @@
             const position = midiToPosition(noteData.pitch, noteData.step, noteData.duration);
             const color = velocityToColor(noteData.velocity);
 
+            // Size varies with velocity for dramatic effect
+            const sizeMultiplier = 0.7 + (noteData.velocity / 127) * 0.6; // 0.7 to 1.3
+            const noteSize = CONFIG.noteScale * sizeMultiplier;
+
             // Create note sphere
-            const geometry = new THREE.SphereGeometry(CONFIG.noteScale, 16, 16);
+            const geometry = new THREE.SphereGeometry(noteSize, 32, 32);
             const material = new THREE.MeshPhongMaterial({
                 color: color,
                 emissive: color,
-                emissiveIntensity: 0.5,
+                emissiveIntensity: 0.8,  // Brighter emission
                 shininess: 100
             });
 
             const noteSphere = new THREE.Mesh(geometry, material);
             noteSphere.position.copy(position);
 
-            // Add glow effect
-            const glowGeometry = new THREE.SphereGeometry(CONFIG.noteScale * 1.5, 16, 16);
+            // Add larger, brighter glow effect
+            const glowGeometry = new THREE.SphereGeometry(noteSize * 2.5, 32, 32);
             const glowMaterial = new THREE.MeshBasicMaterial({
                 color: color,
                 transparent: true,
-                opacity: 0.3,
+                opacity: 0.5,
                 blending: THREE.AdditiveBlending
             });
             const glow = new THREE.Mesh(glowGeometry, glowMaterial);
             noteSphere.add(glow);
 
+            // Add outer rim glow
+            const outerGlowGeometry = new THREE.SphereGeometry(noteSize * 4, 32, 32);
+            const outerGlowMaterial = new THREE.MeshBasicMaterial({
+                color: color,
+                transparent: true,
+                opacity: 0.15,
+                blending: THREE.AdditiveBlending
+            });
+            const outerGlow = new THREE.Mesh(outerGlowGeometry, outerGlowMaterial);
+            noteSphere.add(outerGlow);
+
             noteGroup.add(noteSphere);
 
-            // Draw line to previous note
+            // Draw thicker, more visible line to previous note
             if (notes.length > 0) {
                 const prevNote = notes[notes.length - 1];
-                const lineGeometry = new THREE.BufferGeometry().setFromPoints([
-                    prevNote.position.clone(),
-                    position
-                ]);
-                const lineMaterial = new THREE.LineBasicMaterial({
+
+                // Create tube geometry for thicker line
+                const curve = new THREE.LineCurve3(prevNote.position.clone(), position);
+                const tubeGeometry = new THREE.TubeGeometry(curve, 20, 0.1, 8, false);
+                const tubeMaterial = new THREE.MeshBasicMaterial({
                     color: color,
                     transparent: true,
-                    opacity: 0.6,
-                    linewidth: 2
+                    opacity: 0.7,
+                    blending: THREE.AdditiveBlending
                 });
-                const line = new THREE.Line(lineGeometry, lineMaterial);
-                noteGroup.add(line);
+                const tube = new THREE.Mesh(tubeGeometry, tubeMaterial);
+                noteGroup.add(tube);
 
-                notes[notes.length - 1].line = line;
+                notes[notes.length - 1].line = tube;
+                notes[notes.length - 1].lineOpacity = 0.7;
             }
 
             notes.push({
                 mesh: noteSphere,
                 position: position,
-                data: noteData
+                data: noteData,
+                creationTime: Date.now(),
+                baseScale: sizeMultiplier,
+                glow: glow,
+                outerGlow: outerGlow
             });
 
             // Manage trail length
@@ -511,7 +535,53 @@
             const rotationSpeed = parseFloat(document.getElementById('rotation-speed').value) / 10000;
             noteGroup.rotation.y += rotationSpeed;
 
-            // Animate particles
+            // DRAMATIC: Orbital camera movement
+            const cameraDistance = 40;
+            const cameraSpeed = currentTime * 0.0001;
+            camera.position.x = Math.sin(cameraSpeed) * cameraDistance;
+            camera.position.z = Math.cos(cameraSpeed) * cameraDistance;
+            camera.position.y = 15 + Math.sin(cameraSpeed * 0.5) * 5;
+            camera.lookAt(0, 10, 0);
+
+            // DRAMATIC: Animate notes (pulsing and fading)
+            notes.forEach((note, index) => {
+                const age = currentTime - note.creationTime;
+                const maxAge = 30000; // 30 seconds
+
+                // Pulsing effect - more dramatic for newer notes
+                const pulseSpeed = 0.003;
+                const pulseAmount = Math.max(0, 1 - age / 10000) * 0.3; // Fade pulse over time
+                const pulse = 1 + Math.sin(currentTime * pulseSpeed + index) * pulseAmount;
+                note.mesh.scale.set(pulse, pulse, pulse);
+
+                // Fade out old notes
+                const fadeStart = maxAge * 0.6;
+                if (age > fadeStart) {
+                    const fadeProgress = (age - fadeStart) / (maxAge - fadeStart);
+                    const opacity = 1 - fadeProgress;
+
+                    // Fade sphere material
+                    note.mesh.material.opacity = opacity;
+                    note.mesh.material.transparent = true;
+
+                    // Fade glows
+                    if (note.glow) note.glow.material.opacity = 0.5 * opacity;
+                    if (note.outerGlow) note.outerGlow.material.opacity = 0.15 * opacity;
+                }
+
+                // Fade out connecting lines gradually
+                if (note.line && note.lineOpacity !== undefined) {
+                    const lineFadeSpeed = 0.015;
+                    note.lineOpacity = Math.max(0, note.lineOpacity - lineFadeSpeed * deltaTime / 1000);
+                    note.line.material.opacity = note.lineOpacity;
+                }
+
+                // Gentle rotation of each sphere
+                note.mesh.rotation.y += 0.01;
+                note.mesh.rotation.x += 0.005;
+            });
+
+            // Animate particles - more dramatic movement
             const positions = particleSystem.geometry.attributes.position.array;
             for (let i = 0; i < particleCount; i++) {
                 positions[i * 3] += particleVelocities[i].x;
@@ -525,13 +595,17 @@
             }
             particleSystem.geometry.attributes.position.needsUpdate = true;
 
-            // Rotate particle system slowly
-            particleSystem.rotation.y += 0.0001;
-            particleSystem.rotation.x += 0.0002;
+            // Rotate particle system
+            particleSystem.rotation.y += 0.0003;
+            particleSystem.rotation.x += 0.0005;
 
-            // Pulse lights
-            pointLight1.intensity = 2 + Math.sin(currentTime * 0.001) * 0.5;
-            pointLight2.intensity = 1.5 + Math.cos(currentTime * 0.0015) * 0.5;
+            // DRAMATIC: More intense pulsing lights
+            pointLight1.intensity = 3 + Math.sin(currentTime * 0.002) * 1.5;
+            pointLight2.intensity = 2.5 + Math.cos(currentTime * 0.0025) * 1.5;
+
+            // Move lights around
+            pointLight1.position.x = Math.sin(currentTime * 0.0005) * 30;
+            pointLight1.position.z = Math.cos(currentTime * 0.0005) * 30;
 
             renderer.render(scene, camera);
         }
