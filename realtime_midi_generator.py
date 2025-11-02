@@ -113,7 +113,7 @@ class RealtimeMusicGenerator:
         self.current_notes = seed_notes / np.array([self.vocab_size, 1, 1])
         print("✓ Using default C major scale seed")
 
-    async def ws_handler(self, websocket, path):
+    async def ws_handler(self, websocket):
         """Handle WebSocket connections."""
         self.ws_clients.add(websocket)
         client_ip = websocket.remote_address[0] if websocket.remote_address else 'unknown'
