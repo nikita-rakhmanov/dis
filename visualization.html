@@ -216,19 +216,28 @@
 
     <div id="controls">
         <div class="control-row">
-            <label>Rotation Speed</label>
-            <input type="range" id="rotation-speed" min="0" max="100" value="30">
+            <label>Camera Distance: <span id="distance-value">60</span></label>
+            <input type="range" id="camera-distance" min="20" max="150" value="60">
+        </div>
+        <div class="control-row">
+            <label>Camera Height: <span id="height-value">25</span></label>
+            <input type="range" id="camera-height" min="5" max="80" value="25">
+        </div>
+        <div class="control-row">
+            <label>Auto Rotate: <input type="checkbox" id="auto-rotate" checked></label>
+        </div>
+        <div class="control-row">
+            <label>Show Grid: <input type="checkbox" id="show-grid" checked></label>
         </div>
         <div class="control-row">
             <label>Trail Length</label>
             <input type="range" id="trail-length" min="10" max="200" value="100">
         </div>
         <div class="control-row">
-            <label>Particle Density</label>
-            <input type="range" id="particle-density" min="100" max="2000" value="500">
+            <button id="clear-btn">Clear Visualization</button>
         </div>
         <div class="control-row">
-            <button id="clear-btn">Clear Visualization</button>
+            <button id="reset-camera">Reset Camera</button>
         </div>
     </div>
 
@@ -248,8 +257,11 @@
             Color + Size: Velocity
         </div>
         <div class="legend-item" style="margin-top: 10px; font-size: 11px; color: #666;">
-            Spheres pulse and fade<br>
-            Camera orbits automatically
+            Yellow spheres: Reference points<br>
+            Grid: XZ plane at Y=0<br>
+            Red axis: X (pitch)<br>
+            Green axis: Y (duration)<br>
+            Blue axis: Z (time)
         </div>
     </div>
 
@@ -290,6 +302,35 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
         document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        // ==================== Reference Grid ====================
+        // Add a visual grid to help see coordinate system
+        const gridHelper = new THREE.GridHelper(100, 20, 0x00ffff, 0x444444);
+        gridHelper.position.y = 0;
+        scene.add(gridHelper);
+
+        // Add axis helper (red=X, green=Y, blue=Z)
+        const axesHelper = new THREE.AxesHelper(30);
+        scene.add(axesHelper);
+
+        // Add reference spheres to show the coordinate range
+        const refGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+        const refMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.5 });
+
+        // Mark center (middle C area)
+        const centerSphere = new THREE.Mesh(refGeometry, refMaterial);
+        centerSphere.position.set(0, 0, 0);
+        scene.add(centerSphere);
+
+        // Mark left extreme (low notes)
+        const leftSphere = new THREE.Mesh(refGeometry, refMaterial);
+        leftSphere.position.set(-24, 0, 0);
+        scene.add(leftSphere);
+
+        // Mark right extreme (high notes)
+        const rightSphere = new THREE.Mesh(refGeometry, refMaterial);
+        rightSphere.position.set(24, 0, 0);
+        scene.add(rightSphere);
 
         // ==================== Lighting ====================
         const ambientLight = new THREE.AmbientLight(0x404040, 1);
@@ -531,16 +572,23 @@
                 fpsUpdateTime = currentTime;
             }
 
-            // Rotate scene
+            // Rotate scene (optional)
             const rotationSpeed = parseFloat(document.getElementById('rotation-speed').value) / 10000;
-            noteGroup.rotation.y += rotationSpeed;
+            if (autoRotateEnabled) {
+                noteGroup.rotation.y += rotationSpeed;
+            }
 
-            // DRAMATIC: Orbital camera movement
-            const cameraDistance = 60;  // Further back to see full MIDI range
+            // Orbital camera movement (using user controls)
+            const cameraDistance = userCameraDistance;
             const cameraSpeed = currentTime * 0.0001;
-            camera.position.x = Math.sin(cameraSpeed) * cameraDistance;
-            camera.position.z = Math.cos(cameraSpeed) * cameraDistance;
-            camera.position.y = 25 + Math.sin(cameraSpeed * 0.5) * 8;  // Higher view
+            if (autoRotateEnabled) {
+                camera.position.x = Math.sin(cameraSpeed) * cameraDistance;
+                camera.position.z = Math.cos(cameraSpeed) * cameraDistance;
+                camera.position.y = userCameraHeight + Math.sin(cameraSpeed * 0.5) * 8;
+            } else {
+                // Static position when auto-rotate is off
+                camera.position.set(0, userCameraHeight, cameraDistance);
+            }
             camera.lookAt(0, 10, 0);
 
             // DRAMATIC: Animate notes (pulsing and fading)
@@ -611,11 +659,39 @@
         }
 
         // ==================== Controls ====================
-        document.getElementById('particle-density').addEventListener('input', (e) => {
-            const newCount = parseInt(e.target.value);
-            // Note: For simplicity, we're just updating the display
-            // A full implementation would recreate the particle system
-            document.getElementById('particle-count').textContent = newCount;
+        let userCameraDistance = 60;
+        let userCameraHeight = 25;
+        let autoRotateEnabled = true;
+
+        document.getElementById('camera-distance').addEventListener('input', (e) => {
+            userCameraDistance = parseInt(e.target.value);
+            document.getElementById('distance-value').textContent = userCameraDistance;
+        });
+
+        document.getElementById('camera-height').addEventListener('input', (e) => {
+            userCameraHeight = parseInt(e.target.value);
+            document.getElementById('height-value').textContent = userCameraHeight;
+        });
+
+        document.getElementById('auto-rotate').addEventListener('change', (e) => {
+            autoRotateEnabled = e.target.checked;
+        });
+
+        document.getElementById('show-grid').addEventListener('change', (e) => {
+            gridHelper.visible = e.target.checked;
+            axesHelper.visible = e.target.checked;
+            centerSphere.visible = e.target.checked;
+            leftSphere.visible = e.target.checked;
+            rightSphere.visible = e.target.checked;
+        });
+
+        document.getElementById('reset-camera').addEventListener('click', () => {
+            userCameraDistance = 60;
+            userCameraHeight = 25;
+            document.getElementById('camera-distance').value = 60;
+            document.getElementById('camera-height').value = 25;
+            document.getElementById('distance-value').textContent = 60;
+            document.getElementById('height-value').textContent = 25;
         });
 
         document.getElementById('clear-btn').addEventListener('click', clearVisualization);
