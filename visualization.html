@@ -235,7 +235,7 @@
     <div id="legend">
         <h3>Mapping Legend</h3>
         <div class="legend-item">
-            <span style="color: #ff6b6b;">X axis:</span> Pitch (1 octave)
+            <span style="color: #ff6b6b;">X axis:</span> Pitch (Full Range 0-127)
         </div>
         <div class="legend-item">
             <span style="color: #4ecdc4;">Y axis:</span> Duration
@@ -266,7 +266,7 @@
             rotationSpeed: 0.003,
             noteScale: 0.8,  // Larger spheres for more dramatic effect
             spaceScale: {
-                pitch: 2.5,   // DRAMATIC: For 1 octave (12 notes) → ~(-15 to 15)
+                pitch: 0.4,   // Full MIDI range (0-127) → ~(-25 to 25) centered at 60
                 duration: 20, // DRAMATIC: Duration (0-2s) → (0 to 40)
                 step: 15      // DRAMATIC: Z-axis depth for timing
             }
@@ -341,7 +341,7 @@
 
         function midiToPosition(pitch, step, duration) {
             return new THREE.Vector3(
-                (pitch - 64) * CONFIG.spaceScale.pitch,  // Center around middle C (64)
+                (pitch - 60) * CONFIG.spaceScale.pitch,  // Center around middle C (60)
                 duration * CONFIG.spaceScale.duration,
                 -step * CONFIG.spaceScale.step
             );
