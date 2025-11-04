@@ -107,7 +107,9 @@ You'll see:
 
 ### 4. Setup Your DAW
 
-See detailed instructions in **[GESTURE_CONTROL_GUIDE.md](GESTURE_CONTROL_GUIDE.md)**
+**For Ableton Live users:** See **[ABLETON_MAPPING_GUIDE.md](ABLETON_MAPPING_GUIDE.md)** for detailed step-by-step instructions!
+
+**For other DAWs:** See **[GESTURE_CONTROL_GUIDE.md](GESTURE_CONTROL_GUIDE.md)**
 
 Quick setup:
 1. Create **two MIDI tracks** in your DAW
