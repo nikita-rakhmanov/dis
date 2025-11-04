@@ -312,6 +312,16 @@ class IntegratedMusicGestureSystem:
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
+        # Give camera time to initialize
+        print("Initializing gesture control camera...")
+        time.sleep(1.0)
+
+        # Warmup: read and discard first few frames
+        for i in range(5):
+            ret, _ = cap.read()
+            if not ret:
+                print(f"Warning: Camera warmup frame {i+1}/5 failed")
+
         print("✓ Gesture control started (webcam active)")
         print("   Hand position controls Filter (X) and Reverb (Y)")
         print("   Gestures: Open Palm, Closed Fist, Peace, Rock On\n")
