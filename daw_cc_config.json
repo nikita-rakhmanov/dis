@@ -1,0 +1,161 @@
+{
+  "gesture_midi_mappings": {
+    "description": "MIDI CC mappings for gesture control effects",
+    "mappings": [
+      {
+        "name": "Filter Cutoff/Brightness",
+        "cc_number": 74,
+        "input": "Hand X Position (left-right)",
+        "range": "0-127",
+        "effect": "Low Pass Filter Frequency",
+        "notes": "Left = dark/closed filter, Right = bright/open filter"
+      },
+      {
+        "name": "Reverb/Delay Level",
+        "cc_number": 91,
+        "input": "Hand Y Position (up-down)",
+        "range": "0-127",
+        "effect": "Reverb or Delay Wet/Dry Mix",
+        "notes": "Down = dry, Up = wet (inverted)"
+      },
+      {
+        "name": "Filter Resonance",
+        "cc_number": 71,
+        "input": "Thumb-Index Distance (pinch)",
+        "range": "0-127",
+        "effect": "Filter Resonance/Q",
+        "notes": "Pinch close = low resonance, spread = high resonance"
+      },
+      {
+        "name": "Chorus Level",
+        "cc_number": 93,
+        "input": "Open Palm / Closed Fist gestures",
+        "range": "0 or 127",
+        "effect": "Chorus Amount",
+        "notes": "Open Palm = 127, Closed Fist = 0"
+      },
+      {
+        "name": "Modulation",
+        "cc_number": 1,
+        "input": "Peace Sign / Rock On gestures",
+        "range": "0, 64, or 127",
+        "effect": "LFO Rate, Vibrato, Tremolo",
+        "notes": "Rock On = 127, Peace = 64, Fist = 0"
+      },
+      {
+        "name": "Expression",
+        "cc_number": 11,
+        "input": "Reserved for future use",
+        "range": "0-127",
+        "effect": "Expression/Dynamics",
+        "notes": "Currently unused, can be mapped to hand velocity"
+      }
+    ]
+  },
+  "daw_specific_setups": {
+    "ableton_live": {
+      "step_1": "Create two MIDI tracks",
+      "step_2": "Track 1: Instrument Rack (receives notes)",
+      "step_3": "Track 2: MIDI Control (receives CC)",
+      "step_4": "Create Audio Effects Rack on an audio track",
+      "step_5": "Add Auto Filter (map Frequency to CC74, Resonance to CC71)",
+      "step_6": "Add Reverb (map Dry/Wet to CC91)",
+      "step_7": "Add Chorus (map Amount to CC93)",
+      "step_8": "Route MIDI from Track 2 → Track 1 (CC only)",
+      "midi_input": "External: RNN Music Generator"
+    },
+    "logic_pro": {
+      "step_1": "Create External Instrument track",
+      "step_2": "Set MIDI Input to 'RNN Music Generator'",
+      "step_3": "Create Software Instrument for notes",
+      "step_4": "Add Channel EQ → Assign CC74 to Frequency",
+      "step_5": "Add Space Designer/Reverb → Assign CC91 to Wet",
+      "step_6": "Add Chorus → Assign CC93 to Mix",
+      "step_7": "Use Smart Controls for MIDI Learn",
+      "midi_learn": "Control-click parameter → Learn MIDI Assignment"
+    },
+    "fl_studio": {
+      "step_1": "Options → MIDI Settings",
+      "step_2": "Enable 'RNN Music Generator' input",
+      "step_3": "Load instrument in Channel Rack",
+      "step_4": "Add effects to Mixer track",
+      "step_5": "Right-click effect parameter → Link to controller",
+      "step_6": "Select 'CC #74' for Filter Cutoff",
+      "step_7": "Repeat for other CC mappings",
+      "note": "FL Studio has excellent MIDI Learn support"
+    },
+    "studio_one": {
+      "step_1": "Create Instrument Track",
+      "step_2": "Set MIDI Input to 'RNN Music Generator'",
+      "step_3": "Add effects to instrument channel",
+      "step_4": "External → Add External Device",
+      "step_5": "Map CC numbers to effect parameters",
+      "step_6": "Enable 'Follow' on track for MIDI Learn",
+      "midi_learn": "Right-click → Edit Control Link"
+    },
+    "reaper": {
+      "step_1": "Create track, insert VSTi instrument",
+      "step_2": "Set input to MIDI: RNN Music Generator",
+      "step_3": "Add effects to FX chain",
+      "step_4": "Click 'Param' button on effect",
+      "step_5": "Select 'Learn' mode",
+      "step_6": "Move hand to send CC message",
+      "step_7": "Parameter will auto-map",
+      "note": "Reaper has flexible MIDI routing options"
+    }
+  },
+  "recommended_effects_chain": {
+    "order": [
+      {
+        "position": 1,
+        "effect": "Low Pass Filter",
+        "cc_mappings": {
+          "frequency": 74,
+          "resonance": 71
+        },
+        "purpose": "Shape tone with hand position"
+      },
+      {
+        "position": 2,
+        "effect": "Modulation (LFO/Phaser/Flanger)",
+        "cc_mappings": {
+          "rate": 1,
+          "depth": 1
+        },
+        "purpose": "Movement and animation"
+      },
+      {
+        "position": 3,
+        "effect": "Chorus",
+        "cc_mappings": {
+          "mix": 93
+        },
+        "purpose": "Width and thickness"
+      },
+      {
+        "position": 4,
+        "effect": "Reverb/Delay",
+        "cc_mappings": {
+          "wet_dry": 91
+        },
+        "purpose": "Space and depth"
+      }
+    ],
+    "signal_flow": "Instrument → Filter → Modulation → Chorus → Reverb → Output"
+  },
+  "tips": {
+    "latency": "Use low-latency mode in DAW if available",
+    "buffer_size": "Set audio buffer to 128-256 samples for real-time control",
+    "midi_channel": "All CC messages sent on channel 0 (can be changed in code)",
+    "smoothing": "Built-in smoothing reduces jitter (5-frame buffer)",
+    "update_rate": "20Hz update rate balances responsiveness and CPU",
+    "gesture_priority": "Gestures override continuous position control temporarily"
+  },
+  "testing": {
+    "test_cc_74": "Move hand left-right, observe filter sweep",
+    "test_cc_91": "Move hand up-down, observe reverb increase",
+    "test_cc_71": "Pinch fingers, observe resonance change",
+    "test_gestures": "Make Open Palm/Fist/Peace/Rock gestures",
+    "midi_monitor": "Use MIDI monitor to verify CC messages are sent"
+  }
+}
