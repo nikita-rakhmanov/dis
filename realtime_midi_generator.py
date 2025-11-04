@@ -2,6 +2,7 @@
 """
 Real-time MIDI music generator using a trained RNN model.
 Sends notes to Ableton Live (or any DAW) via virtual MIDI.
+Includes WebSocket server for 3D visualization in real-time.
 """
 
 import numpy as np
@@ -10,6 +11,11 @@ import mido
 from mido import Message
 import time
 import argparse
+import asyncio
+import websockets
+import json
+import threading
+from datetime import datetime
 
 # Configuration
 SEQUENCE_LENGTH = 25
@@ -26,8 +32,8 @@ def mse_with_positive_pressure(y_true, y_pred):
 
 class RealtimeMusicGenerator:
     """Generate and play music in real-time via MIDI."""
-    
-    def __init__(self, model_path, midi_port_name=None):
+
+    def __init__(self, model_path, midi_port_name=None, enable_websocket=True, ws_port=8765):
         # Load model
         print(f"Loading model from {model_path}...")
         self.model = tf.keras.models.load_model(
@@ -35,14 +41,21 @@ class RealtimeMusicGenerator:
             custom_objects={'mse_with_positive_pressure': mse_with_positive_pressure}
         )
         print("✓ Model loaded successfully!\n")
-        
+
         # Setup MIDI
         self._setup_midi(midi_port_name)
-        
+
         self.seq_length = SEQUENCE_LENGTH
         self.vocab_size = VOCAB_SIZE
         self.current_notes = None
         self.prev_start = 0
+
+        # WebSocket setup
+        self.enable_websocket = enable_websocket
+        self.ws_port = ws_port
+        self.ws_clients = set()
+        self.ws_server = None
+        self.ws_loop = None
     
     def _setup_midi(self, port_name):
         """Setup MIDI output port."""
@@ -99,7 +112,48 @@ class RealtimeMusicGenerator:
         seed_notes = np.array(seed_notes)
         self.current_notes = seed_notes / np.array([self.vocab_size, 1, 1])
         print("✓ Using default C major scale seed")
-    
+
+    async def ws_handler(self, websocket):
+        """Handle WebSocket connections."""
+        self.ws_clients.add(websocket)
+        client_ip = websocket.remote_address[0] if websocket.remote_address else 'unknown'
+        print(f"🌐 Visualization client connected from {client_ip} (total: {len(self.ws_clients)})")
+        try:
+            await websocket.wait_closed()
+        finally:
+            self.ws_clients.remove(websocket)
+            print(f"🌐 Visualization client disconnected (total: {len(self.ws_clients)})")
+
+    async def broadcast_note(self, note_data):
+        """Broadcast note data to all connected WebSocket clients."""
+        if self.ws_clients:
+            message = json.dumps(note_data)
+            await asyncio.gather(
+                *[client.send(message) for client in self.ws_clients],
+                return_exceptions=True
+            )
+
+    def start_websocket_server(self):
+        """Start WebSocket server in a background thread."""
+        if not self.enable_websocket:
+            return
+
+        def run_ws_server():
+            self.ws_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self.ws_loop)
+
+            async def server():
+                async with websockets.serve(self.ws_handler, "0.0.0.0", self.ws_port):
+                    print(f"🌐 WebSocket server started on ws://localhost:{self.ws_port}")
+                    print("   Open visualization.html in your browser to see the 3D visualization\n")
+                    await asyncio.Future()  # Run forever
+
+            self.ws_loop.run_until_complete(server())
+
+        ws_thread = threading.Thread(target=run_ws_server, daemon=True)
+        ws_thread.start()
+        time.sleep(0.5)  # Give server time to start
+
     def predict_next_note(self, temperature=1.0):
         """Generate next note."""
         inputs = tf.expand_dims(self.current_notes, 0)
@@ -133,34 +187,58 @@ class RealtimeMusicGenerator:
             axis=0
         )
     
-    def generate(self, num_notes=None, temperature=2.0, velocity=80, 
+    def send_to_visualization(self, note_data):
+        """Send note data to visualization via WebSocket."""
+        if self.enable_websocket and self.ws_loop and self.ws_clients:
+            asyncio.run_coroutine_threadsafe(
+                self.broadcast_note(note_data),
+                self.ws_loop
+            )
+
+    def generate(self, num_notes=None, temperature=2.0, velocity=80,
                  min_duration=0.1, max_duration=2.0):
         """Generate and play notes in real-time."""
+        # Start WebSocket server
+        self.start_websocket_server()
+
         print("\n" + "=" * 60)
         print(f"Starting generation (temperature={temperature}, velocity={velocity})")
         print("Press Ctrl+C to stop")
         print("=" * 60 + "\n")
-        
+
         count = 0
         try:
             while num_notes is None or count < num_notes:
                 # Generate
                 pitch, step, duration = self.predict_next_note(temperature)
                 duration = max(min_duration, min(max_duration, duration))
-                
+
                 # Display
                 note_name = self._pitch_to_name(pitch)
                 print(f"♪ {count+1:4d}: {note_name:4s} (pitch={pitch:3d}) "
                       f"step={step:5.3f}s dur={duration:5.3f}s")
-                
+
+                # Broadcast to visualization
+                note_data = {
+                    'type': 'note',
+                    'pitch': int(pitch),
+                    'step': float(step),
+                    'duration': float(duration),
+                    'velocity': int(velocity),
+                    'note_name': note_name,
+                    'timestamp': datetime.now().isoformat(),
+                    'index': count
+                }
+                self.send_to_visualization(note_data)
+
                 # Play
                 self.play_note(pitch, duration, velocity)
-                
+
                 # Update
                 self.update_sequence(pitch, step, duration)
                 self.prev_start += step
                 count += 1
-                
+
         except KeyboardInterrupt:
             print("\n" + "=" * 60)
             print("Stopping...")
@@ -180,7 +258,7 @@ class RealtimeMusicGenerator:
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Real-time MIDI music generator')
+    parser = argparse.ArgumentParser(description='Real-time MIDI music generator with 3D visualization')
     parser.add_argument('--model', default='music_rnn_model.keras',
                         help='Path to trained model')
     parser.add_argument('--seed', default='seed_sequence.npy',
@@ -197,11 +275,20 @@ def main():
                         help='Minimum note duration in seconds')
     parser.add_argument('--max-duration', type=float, default=2.0,
                         help='Maximum note duration in seconds')
-    
+    parser.add_argument('--no-visualization', action='store_true',
+                        help='Disable WebSocket server for visualization')
+    parser.add_argument('--ws-port', type=int, default=8765,
+                        help='WebSocket port for visualization (default: 8765)')
+
     args = parser.parse_args()
-    
+
     # Create generator
-    generator = RealtimeMusicGenerator(args.model, args.port)
+    generator = RealtimeMusicGenerator(
+        args.model,
+        args.port,
+        enable_websocket=not args.no_visualization,
+        ws_port=args.ws_port
+    )
     
     # Load seed
     generator.load_seed_sequence(args.seed)
