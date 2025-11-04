@@ -324,7 +324,9 @@ class IntegratedMusicGestureSystem:
 
         print("✓ Gesture control started (webcam active)")
         print("   Hand position controls Filter (X) and Reverb (Y)")
-        print("   Gestures: Open Palm, Closed Fist, Peace, Rock On\n")
+        print("   Gestures: Open Palm, Closed Fist, Peace, Rock On")
+        print("   Note: Webcam window disabled (macOS compatibility)")
+        print()
 
         frame_interval = 1.0 / self.gesture_controller.update_rate
         last_update = time.time()
@@ -358,20 +360,10 @@ class IntegratedMusicGestureSystem:
 
                 last_update = current_time
 
-            # Draw visualization
-            frame = self.hand_tracker.draw_hand_info(frame, results)
-            cv2.putText(frame, "Gesture Control Active", (10, 30),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-            cv2.putText(frame, "Press 'q' to quit", (10, 60),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
-
-            cv2.imshow('Gesture Control - Music Effects', frame)
-
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+            # Note: cv2.imshow removed - causes crashes on macOS when called from background thread
+            # Gesture control works fine without the window display
 
         cap.release()
-        cv2.destroyAllWindows()
         self.hand_tracker.release()
         print("✓ Gesture control stopped")
 
@@ -386,7 +378,10 @@ class IntegratedMusicGestureSystem:
             daemon=True
         )
         self.gesture_thread.start()
-        time.sleep(1.0)  # Give camera time to initialize
+
+        # Wait for camera to fully initialize before starting music
+        print("Waiting for gesture control to initialize...")
+        time.sleep(3.0)  # Give camera time to fully initialize
 
     def stop_gesture_control(self):
         """Stop gesture control thread."""
@@ -440,7 +435,7 @@ class IntegratedMusicGestureSystem:
             )
 
     def generate(self, num_notes=None, temperature=2.0, velocity=80,
-                 min_duration=0.1, max_duration=2.0):
+                 min_duration=0.1, max_duration=2.0, speed=1.0):
         """Generate and play music with gesture control."""
         # Start services
         self.start_websocket_server()
@@ -449,7 +444,7 @@ class IntegratedMusicGestureSystem:
         print("\n" + "=" * 70)
         print(f"🎵 INTEGRATED MUSIC GENERATION WITH GESTURE CONTROL")
         print("=" * 70)
-        print(f"Temperature: {temperature} | Velocity: {velocity}")
+        print(f"Temperature: {temperature} | Velocity: {velocity} | Speed: {speed}x")
         if self.enable_gesture:
             print("Gesture Control: ACTIVE - Move hands to control effects!")
         print("Press Ctrl+C to stop")
@@ -462,17 +457,22 @@ class IntegratedMusicGestureSystem:
                 pitch, step, duration = self.predict_next_note(temperature)
                 duration = max(min_duration, min(max_duration, duration))
 
+                # Apply speed multiplier (higher speed = slower playback)
+                # speed=2.0 means twice as slow (multiply durations by 2)
+                duration_adjusted = duration * speed
+                step_adjusted = step * speed
+
                 # Display
                 note_name = self._pitch_to_name(pitch)
                 print(f"♪ {count+1:4d}: {note_name:4s} (pitch={pitch:3d}) "
-                      f"step={step:5.3f}s dur={duration:5.3f}s")
+                      f"step={step_adjusted:5.3f}s dur={duration_adjusted:5.3f}s")
 
                 # Broadcast to visualization
                 note_data = {
                     'type': 'note',
                     'pitch': int(pitch),
-                    'step': float(step),
-                    'duration': float(duration),
+                    'step': float(step_adjusted),
+                    'duration': float(duration_adjusted),
                     'velocity': int(velocity),
                     'note_name': note_name,
                     'timestamp': datetime.now().isoformat(),
@@ -480,10 +480,10 @@ class IntegratedMusicGestureSystem:
                 }
                 self.send_to_visualization(note_data)
 
-                # Play note
-                self.play_note(pitch, duration, velocity)
+                # Play note (with adjusted duration)
+                self.play_note(pitch, duration_adjusted, velocity)
 
-                # Update sequence
+                # Update sequence (with original values, not adjusted)
                 self.update_sequence(pitch, step, duration)
                 self.prev_start += step
                 count += 1
@@ -540,6 +540,8 @@ def main():
                        help='Disable gesture control')
     parser.add_argument('--ws-port', type=int, default=8765,
                        help='WebSocket port')
+    parser.add_argument('--speed', type=float, default=1.0,
+                       help='Playback speed multiplier (higher = slower, e.g., 2.0 = half speed)')
 
     args = parser.parse_args()
 
@@ -561,7 +563,8 @@ def main():
         temperature=args.temperature,
         velocity=args.velocity,
         min_duration=args.min_duration,
-        max_duration=args.max_duration
+        max_duration=args.max_duration,
+        speed=args.speed
     )
 
 
