@@ -66,10 +66,26 @@ class SimpleMIDITest:
 
     def test_gesture_control(self):
         """Run hand tracking and send MIDI CC."""
+        print("Attempting to open webcam...")
         cap = cv2.VideoCapture(0)
 
         if not cap.isOpened():
-            print("✗ Could not open webcam")
+            print("\n" + "=" * 70)
+            print("✗ ERROR: Could not open webcam")
+            print("=" * 70)
+            print("\nPossible causes:")
+            print("  1. No webcam connected to this system")
+            print("  2. Webcam is being used by another application")
+            print("  3. Permission denied (check camera permissions)")
+            print("  4. Running on a server/remote system without camera")
+            print("\nSolutions:")
+            print("  • If no webcam: Use test_gesture_midi_sim.py instead")
+            print("  • Check available cameras: ls /dev/video*")
+            print("  • Close other apps using the camera")
+            print("  • On Linux: check permissions with v4l2-ctl --list-devices")
+            print("\nFor testing without a webcam:")
+            print("  python test_gesture_midi_sim.py")
+            print("=" * 70)
             return
 
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
@@ -102,6 +118,8 @@ class SimpleMIDITest:
             while True:
                 ret, frame = cap.read()
                 if not ret:
+                    print("\n✗ ERROR: Failed to read frame from webcam")
+                    print("Webcam may have disconnected or encountered an error")
                     break
 
                 frame = cv2.flip(frame, 1)
