@@ -91,6 +91,18 @@ class SimpleMIDITest:
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
+        # Give camera time to initialize and warm up
+        print("Initializing camera...")
+        time.sleep(1.0)
+
+        # Read and discard first few frames (camera warmup)
+        for i in range(5):
+            ret, _ = cap.read()
+            if not ret:
+                print(f"Warning: Camera warmup frame {i+1}/5 failed")
+
+        print("✓ Camera ready!")
+
         tracker = HandTracker(max_hands=1)
 
         print("=" * 70)
