@@ -2,22 +2,22 @@
 
 ## Quick Setup
 
-Since we've been developing on a remote server, you need to pull the changes to your local machine to use the webcam features.
+Since webcam features require local hardware, you need to set up the project on your local machine.
 
-### 1. Pull Latest Changes
+### 1. Clone or Pull Latest Changes
 
 On your local machine:
 
 ```bash
 cd /path/to/dis
-git pull origin claude/integrate-gesture-recognition-011CUoD8ZGSLRhM2KSGKB93Y
+git pull origin main
 ```
 
-Or if you're on a different branch:
+Or if you're cloning for the first time:
 
 ```bash
-git fetch origin
-git checkout claude/integrate-gesture-recognition-011CUoD8ZGSLRhM2KSGKB93Y
+git clone <repository-url>
+cd dis
 ```
 
 ### 2. Install Dependencies
@@ -83,11 +83,14 @@ pip install -r requirements.txt
   ```
 
 ### Script exits immediately (0 frames)
-This means you're running the old version. Pull the latest changes!
+This means the webcam is not accessible. Try:
 
 ```bash
-git status  # Check your branch
-git pull    # Get latest code
+# Check if webcam is available
+ls /dev/video*
+
+# Try a different camera index in the code
+# Edit test_gesture_midi.py and change cv2.VideoCapture(0) to cv2.VideoCapture(1)
 ```
 
 ## Files You Need
@@ -117,11 +120,8 @@ Make sure these files exist after pulling:
 Run this to verify everything is ready:
 
 ```bash
-# Check you're on the right branch
-git branch
-
-# Should show:
-# * claude/integrate-gesture-recognition-011CUoD8ZGSLRhM2KSGKB93Y
+# Check you have the latest code
+git status
 
 # Check files exist
 ls -la integrated_music_gesture_control.py test_gesture_midi.py
@@ -133,4 +133,4 @@ python -c "import cv2, mediapipe, mido; print('✓ All imports OK')"
 python gesture_control/hand_tracker.py
 ```
 
-If everything works, you're ready to go! 🎥👋
+If everything works, you're ready to go!

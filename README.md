@@ -33,11 +33,18 @@ dis/
 ├── integrated_music_gesture_control.py  # Main integrated system
 ├── realtime_midi_generator.py           # Standalone MIDI generator
 ├── train_music_rnn.py                   # Model training script
-├── test_gesture_midi.py                 # Test gesture control only
+├── test_gesture_midi.py                 # Test gesture control (webcam)
+├── test_gesture_midi_sim.py             # Test MIDI CC (no webcam)
 ├── gesture_control/
 │   ├── hand_tracker.py                  # Hand tracking module
+│   ├── README.md                        # Module documentation
+│   ├── QUICKSTART.md                    # Quick start guide
 │   └── __init__.py
-├── GESTURE_CONTROL_GUIDE.md             # Detailed setup guide
+├── GESTURE_CONTROL_GUIDE.md             # Detailed DAW setup guide
+├── ABLETON_MAPPING_GUIDE.md             # Ableton-specific guide
+├── QUICK_ABLETON_SETUP.md               # 5-minute Ableton setup
+├── SETUP_LOCAL_MACHINE.md               # Local/webcam setup
+├── VISUALIZATION_README.md              # 3D visualization docs
 ├── daw_cc_config.json                   # DAW configuration examples
 ├── requirements.txt                     # Python dependencies
 └── README.md                            # This file
@@ -326,9 +333,9 @@ Contributions welcome! Areas for improvement:
 ## Support
 
 For issues, questions, or suggestions:
-1. Check [GESTURE_CONTROL_GUIDE.md](GESTURE_CONTROL_GUIDE.md)
+1. Check [GESTURE_CONTROL_GUIDE.md](GESTURE_CONTROL_GUIDE.md) or [ABLETON_MAPPING_GUIDE.md](ABLETON_MAPPING_GUIDE.md)
 2. Review troubleshooting section above
-3. Check DAW-specific setup in `daw_cc_config.json`
+3. Check [SETUP_LOCAL_MACHINE.md](SETUP_LOCAL_MACHINE.md) for webcam setup
 
 ## Roadmap
 
