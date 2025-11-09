@@ -2,12 +2,15 @@
 
 A Python module for hand tracking and gesture recognition using MediaPipe and OpenCV.
 
+Integrated with the music generation system to provide real-time MIDI CC control via hand gestures.
+
 ## Features
 
 - **Real-time hand tracking** using webcam
 - **Multi-hand detection** (up to 2 hands simultaneously)
 - **Gesture recognition** with labeled bounding boxes
 - **Visual feedback** with hand landmarks and connections
+- **MIDI CC output** for DAW effect control
 
 ## Supported Gestures
 
@@ -82,15 +85,17 @@ Install with:
 pip install opencv-python mediapipe numpy
 ```
 
-## Future Integration
+## Music Integration
 
-This module is designed to be integrated with the main music generation application
-for gesture-based UI control. Future capabilities:
+This module is integrated with the main music generation application for real-time effect control:
 
-- Control music generation parameters with gestures
-- Start/stop music with hand signals
-- Adjust tempo and dynamics with hand movements
-- Switch between different musical modes
+- **Hand X Position** → Filter Cutoff (CC 74)
+- **Hand Y Position** → Reverb/Delay (CC 91)
+- **Pinch Gesture** → Resonance (CC 71)
+- **Open Palm** → Chorus Max (CC 93)
+- **Closed Fist** → Effects Off
+
+See the main README.md and GESTURE_CONTROL_GUIDE.md for full integration details.
 
 ## Technical Details
 
