@@ -125,13 +125,11 @@ tracker.release()
 
 ## Next Steps
 
-This module is designed to eventually control the music generation application.
-Future integration possibilities:
+Now that gesture control is working, you can:
 
-- Use gestures to start/stop music generation
-- Control tempo with hand movements
-- Switch between different musical modes with specific gestures
-- Adjust volume and dynamics with hand positions
+1. **Test with MIDI**: Run `python test_gesture_midi.py` to send MIDI CC messages
+2. **Setup your DAW**: See ABLETON_MAPPING_GUIDE.md or GESTURE_CONTROL_GUIDE.md
+3. **Run full system**: Use `python integrated_music_gesture_control.py` for music generation + gesture control
 
 ## Technical Details
 
