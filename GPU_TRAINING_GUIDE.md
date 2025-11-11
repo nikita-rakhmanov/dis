@@ -55,8 +55,12 @@ podman run --rm \
   --workdir /workspace \
   --shm-size=2g \
   docker.io/tensorflow/tensorflow:latest-gpu \
-  python3 train_music_rnn.py
+  bash -c "pip install --no-cache-dir -r requirements.txt && python3 train_music_rnn.py"
 ```
+
+**What this does**:
+- Installs required Python packages (`pandas`, `pretty_midi`, `mido`, etc.)
+- Then runs the training script
 
 **Option B: Using NVIDIA NGC TensorFlow Image (More Optimized)**
 
@@ -67,15 +71,16 @@ podman run --rm \
   --workdir /workspace \
   --shm-size=2g \
   nvcr.io/nvidia/tensorflow:24.10-tf2-py3 \
-  python3 train_music_rnn.py
+  bash -c "pip install --no-cache-dir -r requirements.txt && python3 train_music_rnn.py"
 ```
 
-**What this does**:
+**What the flags do**:
 - `--device nvidia.com/gpu=all`: Gives container access to all GPUs
 - `--volume $(pwd):/workspace:z`: Mounts current directory to /workspace (with SELinux label)
 - `--workdir /workspace`: Sets working directory in container
 - `--shm-size=2g`: Increases shared memory (helps with large batches)
 - `--rm`: Auto-removes container when done
+- `bash -c "..."`: Installs dependencies first, then runs training
 
 ---
 
