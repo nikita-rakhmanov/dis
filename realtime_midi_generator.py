@@ -18,7 +18,7 @@ import threading
 from datetime import datetime
 
 # Configuration
-SEQUENCE_LENGTH = 25
+SEQUENCE_LENGTH = 50  # Must match training script
 VOCAB_SIZE = 128
 KEY_ORDER = ['pitch', 'step', 'duration']
 

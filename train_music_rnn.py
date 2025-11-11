@@ -15,11 +15,11 @@ from typing import Optional
 
 # Configuration
 SEED = 42
-SEQUENCE_LENGTH = 25
+SEQUENCE_LENGTH = 25  # Increased from 25 to capture longer musical phrases
 VOCAB_SIZE = 128
 BATCH_SIZE = 64
 EPOCHS = 50
-LEARNING_RATE = 0.005
+LEARNING_RATE = 0.002  # Reduced from 0.005 for more stable training
 NUM_TRAINING_FILES = 1000  # Start small, increase later
 
 # Set random seeds
@@ -103,11 +103,15 @@ def mse_with_positive_pressure(y_true: tf.Tensor, y_pred: tf.Tensor):
 
 
 def build_model(seq_length: int, vocab_size: int, learning_rate: float):
-    """Build and compile the RNN model."""
+    """Build and compile the RNN model with Stacked LSTM architecture."""
     input_shape = (seq_length, 3)
-    
+
     inputs = tf.keras.Input(input_shape)
-    x = tf.keras.layers.LSTM(128)(inputs)
+
+    # Stacked LSTM architecture for better temporal modeling
+    x = tf.keras.layers.LSTM(256, return_sequences=True)(inputs)
+    x = tf.keras.layers.Dropout(0.3)(x)
+    x = tf.keras.layers.LSTM(128)(x)
 
     outputs = {
         'pitch': tf.keras.layers.Dense(vocab_size, name='pitch')(x),
@@ -126,7 +130,7 @@ def build_model(seq_length: int, vocab_size: int, learning_rate: float):
     model.compile(
         loss=loss,
         loss_weights={
-            'pitch': 0.05,
+            'pitch': 0.25,  # Increased from 0.05 to improve melodic quality
             'step': 1.0,
             'duration': 1.0,
         },
