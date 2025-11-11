@@ -15,11 +15,11 @@ from typing import Optional
 
 # Configuration
 SEED = 42
-SEQUENCE_LENGTH = 50  # Increased from 25 to capture longer musical phrases
+SEQUENCE_LENGTH = 25  # Increased from 25 to capture longer musical phrases
 VOCAB_SIZE = 128
 BATCH_SIZE = 64
 EPOCHS = 50
-LEARNING_RATE = 0.001  # Reduced from 0.005 for more stable training
+LEARNING_RATE = 0.002  # Reduced from 0.005 for more stable training
 NUM_TRAINING_FILES = 1000  # Start small, increase later
 
 # Set random seeds
@@ -130,7 +130,7 @@ def build_model(seq_length: int, vocab_size: int, learning_rate: float):
     model.compile(
         loss=loss,
         loss_weights={
-            'pitch': 0.5,  # Increased from 0.05 to improve melodic quality
+            'pitch': 0.25,  # Increased from 0.05 to improve melodic quality
             'step': 1.0,
             'duration': 1.0,
         },
