@@ -15,9 +15,9 @@ from typing import Optional
 
 # Configuration
 SEED = 42
-SEQUENCE_LENGTH = 25  # Increased from 25 to capture longer musical phrases
+SEQUENCE_LENGTH = 50  # Increased from 25 to capture longer musical phrases
 VOCAB_SIZE = 128
-BATCH_SIZE = 64
+BATCH_SIZE = 256 
 EPOCHS = 50
 LEARNING_RATE = 0.002  # Reduced from 0.005 for more stable training
 NUM_TRAINING_FILES = 1000  # Start small, increase later
