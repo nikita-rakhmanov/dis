@@ -11,6 +11,10 @@ sends MIDI CC (Control Change) messages to control audio effects
 in your DAW (delays, filters, reverb, etc.)
 """
 
+import os
+# Fix for TensorFlow 2.16+ model compatibility with Keras 3.x
+os.environ['TF_USE_LEGACY_KERAS'] = '1'
+
 import numpy as np
 import tensorflow as tf
 import mido
