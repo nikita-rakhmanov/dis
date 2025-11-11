@@ -30,7 +30,7 @@ from collections import deque
 from gesture_control.hand_tracker import HandTracker
 
 # Configuration
-SEQUENCE_LENGTH = 25
+SEQUENCE_LENGTH = 50  # Must match training script
 VOCAB_SIZE = 128
 KEY_ORDER = ['pitch', 'step', 'duration']
 
