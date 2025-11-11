@@ -287,6 +287,7 @@ class GestureMIDIController:
     CC_CHORUS = 93
     CC_MODULATION = 1
 ```
+    """Download the MAESTRO dataset if not present.
 
 ### Adjust Smoothing
 
@@ -337,16 +338,3 @@ For issues, questions, or suggestions:
 2. Review troubleshooting section above
 3. Check [SETUP_LOCAL_MACHINE.md](SETUP_LOCAL_MACHINE.md) for webcam setup
 
-## Roadmap
-
-- [ ] Multi-hand stereo control (left hand = reverb, right hand = filter)
-- [ ] Hand velocity → note velocity mapping
-- [ ] Custom gesture training interface
-- [ ] Preset system for different effect configurations
-- [ ] OSC support for additional DAWs
-- [ ] Mobile app for remote control
-- [ ] AI-powered gesture suggestion based on music style
-
----
-
-**Enjoy creating music with your hands!** 🎵👋
