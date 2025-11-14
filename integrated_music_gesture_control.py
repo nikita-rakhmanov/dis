@@ -24,6 +24,7 @@ import sys
 from collections import deque
 
 from gesture_control.hand_tracker import HandTracker
+from dual_model_polyphony import DualModelPolyphonySystem
 
 SEQUENCE_LENGTH = 50
 VOCAB_SIZE = 128
@@ -122,7 +123,21 @@ class IntegratedMusicGestureSystem:
     """Integrates MIDI generation with gesture control."""
 
     def __init__(self, model_path, midi_port_name=None, enable_websocket=True,
-                 ws_port=8765, enable_gesture=True):
+                 ws_port=8765, enable_gesture=True, enable_polyphony=False,
+                 harmony_style='classical'):
+        """
+        Initialize the integrated system.
+
+        Args:
+            model_path: Path to trained RNN model
+            midi_port_name: MIDI port name (interactive if None)
+            enable_websocket: Enable WebSocket visualization
+            ws_port: WebSocket port number
+            enable_gesture: Enable gesture control
+            enable_polyphony: Enable dual-model polyphony (2-voice)
+            harmony_style: Harmony style for polyphony ('classical', 'jazz', 'modern')
+        """
+        # Load model
         print(f"Loading model from {model_path}...")
         self.model = tf.keras.models.load_model(
             model_path,
@@ -153,6 +168,18 @@ class IntegratedMusicGestureSystem:
             self.gesture_controller = GestureMIDIController(self.midi_out)
             self.hand_tracker = HandTracker(max_hands=1)
             print("✓ Gesture control initialized\n")
+
+        # Polyphony setup
+        self.enable_polyphony = enable_polyphony
+        self.polyphony_system = None
+
+        if self.enable_polyphony:
+            self.polyphony_system = DualModelPolyphonySystem(
+                melody_generator=self,
+                harmony_mode='simple',  # Start with rule-based
+                harmony_style=harmony_style
+            )
+            print(f"✓ Polyphony enabled (2-voice, {harmony_style} style)\n")
 
     def _setup_midi(self, port_name):
         """Setup MIDI output port."""
@@ -384,6 +411,8 @@ class IntegratedMusicGestureSystem:
         print(f"🎵 INTEGRATED MUSIC GENERATION WITH GESTURE CONTROL")
         print("=" * 70)
         print(f"Temperature: {temperature} | Velocity: {velocity} | Speed: {speed}x")
+        if self.enable_polyphony:
+            print(f"Polyphony: 2-VOICE ENABLED")
         if self.enable_gesture:
             print("Gesture Control: ACTIVE - Move hands to control effects!")
         print("Press Ctrl+C to stop")
@@ -392,33 +421,88 @@ class IntegratedMusicGestureSystem:
         count = 0
         try:
             while num_notes is None or count < num_notes:
-                pitch, step, duration = self.predict_next_note(temperature)
-                duration = max(min_duration, min(max_duration, duration))
+                if self.enable_polyphony:
+                    # POLYPHONIC MODE: Generate melody + harmony
+                    melody_note, harmony_note = self.polyphony_system.predict_next_notes(temperature)
+                    pitch, step, duration = melody_note
+                    harmony_pitch, harmony_step, harmony_duration = harmony_note
 
-                # Speed multiplier: higher value = slower playback
-                duration_adjusted = duration * speed
-                step_adjusted = step * speed
+                    # Clamp durations
+                    duration = max(min_duration, min(max_duration, duration))
+                    harmony_duration = max(min_duration, min(max_duration, harmony_duration))
 
-                note_name = self._pitch_to_name(pitch)
-                print(f"♪ {count+1:4d}: {note_name:4s} (pitch={pitch:3d}) "
-                      f"step={step_adjusted:5.3f}s dur={duration_adjusted:5.3f}s")
+                    # Apply speed multiplier
+                    duration_adjusted = duration * speed
+                    step_adjusted = step * speed
+                    harmony_duration_adjusted = harmony_duration * speed
 
-                note_data = {
-                    'type': 'note',
-                    'pitch': int(pitch),
-                    'step': float(step_adjusted),
-                    'duration': float(duration_adjusted),
-                    'velocity': int(velocity),
-                    'note_name': note_name,
-                    'timestamp': datetime.now().isoformat(),
-                    'index': count
-                }
-                self.send_to_visualization(note_data)
+                    # Display
+                    note_name = self._pitch_to_name(pitch)
+                    harmony_name = self._pitch_to_name(harmony_pitch)
+                    print(f"♪ {count+1:4d}: {note_name:4s}+{harmony_name:4s} "
+                          f"(melody={pitch:3d}, harmony={harmony_pitch:3d}) "
+                          f"step={step_adjusted:5.3f}s dur={duration_adjusted:5.3f}s")
 
-                self.play_note(pitch, duration_adjusted, velocity)
+                    # Broadcast to visualization (melody)
+                    note_data = {
+                        'type': 'note',
+                        'pitch': int(pitch),
+                        'step': float(step_adjusted),
+                        'duration': float(duration_adjusted),
+                        'velocity': int(velocity),
+                        'note_name': note_name,
+                        'timestamp': datetime.now().isoformat(),
+                        'index': count,
+                        'harmony_pitch': int(harmony_pitch),
+                        'harmony_name': harmony_name
+                    }
+                    self.send_to_visualization(note_data)
 
-                self.update_sequence(pitch, step, duration)
-                self.prev_start += step
+                    # Play both notes simultaneously
+                    self.polyphony_system.play_notes(
+                        (pitch, step_adjusted, duration_adjusted),
+                        (harmony_pitch, harmony_step, harmony_duration_adjusted),
+                        velocity
+                    )
+
+                    # Update sequence (melody only)
+                    self.update_sequence(pitch, step, duration)
+                    self.prev_start += step
+
+                else:
+                    # MONOPHONIC MODE: Original single-note generation
+                    pitch, step, duration = self.predict_next_note(temperature)
+                    duration = max(min_duration, min(max_duration, duration))
+
+                    # Apply speed multiplier
+                    duration_adjusted = duration * speed
+                    step_adjusted = step * speed
+
+                    # Display
+                    note_name = self._pitch_to_name(pitch)
+                    print(f"♪ {count+1:4d}: {note_name:4s} (pitch={pitch:3d}) "
+                          f"step={step_adjusted:5.3f}s dur={duration_adjusted:5.3f}s")
+
+                    # Broadcast to visualization
+                    note_data = {
+                        'type': 'note',
+                        'pitch': int(pitch),
+                        'step': float(step_adjusted),
+                        'duration': float(duration_adjusted),
+                        'velocity': int(velocity),
+                        'note_name': note_name,
+                        'timestamp': datetime.now().isoformat(),
+                        'index': count
+                    }
+                    self.send_to_visualization(note_data)
+
+                    # Play note
+                    self.play_note(pitch, duration_adjusted, velocity)
+
+                    # Update sequence
+                    self.update_sequence(pitch, step, duration)
+                    self.prev_start += step
+
                 count += 1
 
         except KeyboardInterrupt:
@@ -472,6 +556,11 @@ def main():
                        help='WebSocket port')
     parser.add_argument('--speed', type=float, default=1.0,
                        help='Playback speed multiplier (higher = slower, e.g., 2.0 = half speed)')
+    parser.add_argument('--polyphony', action='store_true',
+                       help='Enable 2-voice polyphony (melody + harmony)')
+    parser.add_argument('--harmony-style', default='classical',
+                       choices=['classical', 'jazz', 'modern'],
+                       help='Harmony style for polyphony mode')
 
     args = parser.parse_args()
 
@@ -480,7 +569,9 @@ def main():
         args.port,
         enable_websocket=not args.no_visualization,
         ws_port=args.ws_port,
-        enable_gesture=not args.no_gesture
+        enable_gesture=not args.no_gesture,
+        enable_polyphony=args.polyphony,
+        harmony_style=args.harmony_style
     )
 
     system.load_seed_sequence(args.seed)
