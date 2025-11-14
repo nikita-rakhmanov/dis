@@ -378,11 +378,11 @@ Compressor:
 ┌─────────────────────────────────────────────────────────┐
 │  GESTURE CONTROL MIDI CC QUICK REFERENCE                │
 ├─────────────────────────────────────────────────────────┤
-│  CC 74  │  Hand X (←→)    │  Filter Cutoff             │
-│  CC 91  │  Hand Y (↑↓)    │  Reverb Wet/Dry            │
-│  CC 71  │  Pinch (🤏)     │  Filter Resonance          │
-│  CC 93  │  Palm/Fist (✋) │  Chorus Amount             │
-│  CC 1   │  Gestures (✌️🤘) │  Modulation               │
+│  CC 74  │  Hand X (←→)      │  Filter Cutoff           │
+│  CC 91  │  Hand Y (↑↓)      │  Reverb Wet/Dry          │
+│  CC 71  │  Pinch            │  Filter Resonance        │
+│  CC 93  │  Palm/Fist        │  Chorus Amount           │
+│  CC 1   │  Gestures         │  Modulation              │
 └─────────────────────────────────────────────────────────┘
 
 MIDI MAPPING SHORTCUTS:
@@ -397,6 +397,6 @@ TRACK ROUTING:
 
 ---
 
-**Pro Tip:** Once you have this working, save your Live Set as a template! Then you can start new gesture-controlled sessions instantly.
+Once you have this working, save your Live Set as a template to start new gesture-controlled sessions instantly.
 
-**Need help?** Run `python test_gesture_midi.py` first to verify everything works before debugging in Ableton.
+To verify your setup, run `python test_gesture_midi.py` before debugging in Ableton.

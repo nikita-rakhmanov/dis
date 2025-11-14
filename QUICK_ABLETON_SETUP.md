@@ -1,4 +1,4 @@
-# Quick Ableton Setup - 5 Minutes to Success!
+# Quick Ableton Setup Guide
 
 ## The Problem You're Having
 
@@ -51,11 +51,11 @@ python map_midi_cc.py
 1. In Ableton: Press Cmd+M (Mac) or Ctrl+M (Windows)
 2. Click: Auto Filter → Frequency knob
 3. In terminal: Press ENTER
-4. Watch the knob - it will auto-detect CC 74!
+4. The knob will auto-detect CC 74
 5. In Ableton: Press Cmd+M to exit MIDI Mapping
 ```
 
-✅ Filter Cutoff is now mapped!
+Filter Cutoff is now mapped.
 
 #### Mapping 2/5: Filter Resonance (CC 71)
 
@@ -63,11 +63,11 @@ python map_midi_cc.py
 1. In Ableton: Press Cmd+M
 2. Click: Auto Filter → Resonance knob
 3. In terminal: Press ENTER
-4. Auto-detects CC 71!
+4. Auto-detects CC 71
 5. In Ableton: Press Cmd+M to exit
 ```
 
-✅ Resonance is now mapped!
+Resonance is now mapped.
 
 #### Mapping 3/5: Reverb Level (CC 91)
 
@@ -75,11 +75,11 @@ python map_midi_cc.py
 1. In Ableton: Press Cmd+M
 2. Click: Reverb → Dry/Wet knob
 3. In terminal: Press ENTER
-4. Auto-detects CC 91!
+4. Auto-detects CC 91
 5. In Ableton: Press Cmd+M to exit
 ```
 
-✅ Reverb is now mapped!
+Reverb is now mapped.
 
 #### Mapping 4/5: Chorus Amount (CC 93)
 
@@ -87,11 +87,11 @@ python map_midi_cc.py
 1. In Ableton: Press Cmd+M
 2. Click: Chorus → Dry/Wet knob
 3. In terminal: Press ENTER
-4. Auto-detects CC 93!
+4. Auto-detects CC 93
 5. In Ableton: Press Cmd+M to exit
 ```
 
-✅ Chorus is now mapped!
+Chorus is now mapped.
 
 #### Mapping 5/5: Modulation (CC 1) - Optional
 
@@ -107,9 +107,9 @@ python test_gesture_midi_sim.py
 ```
 
 Type `S` to start auto-sweep. You should see:
-- Filter sweeping ✅
-- Reverb fading in/out ✅
-- Chorus modulating ✅
+- Filter sweeping
+- Reverb fading in/out
+- Chorus modulating
 
 ### Step 4: Try With Webcam
 
@@ -129,9 +129,9 @@ python integrated_music_gesture_control.py
 ```
 
 Now you have:
-- ✅ Music generation from RNN
-- ✅ Gesture control of effects
-- ✅ Both running simultaneously!
+- Music generation from RNN
+- Gesture control of effects
+- Both running simultaneously
 
 ## Troubleshooting
 
@@ -172,7 +172,7 @@ Then select which CC to sweep again.
 | 93 | Chorus | Chorus → Dry/Wet | Gestures |
 | 1 | Modulation | Any mod effect | Gestures |
 
-## Pro Tips
+## Additional Tips
 
 ### Tip 1: Adjust CC Ranges
 After mapping, you can fine-tune ranges:
@@ -212,7 +212,7 @@ Pick just the CC you want to fix.
 5. Run full integrated system                [Done!]
 ```
 
-**Total time: ~7 minutes** from zero to gesture-controlled music! 🎵👋
+**Total time: Approximately 7 minutes** from zero to gesture-controlled music.
 
 ---
 
