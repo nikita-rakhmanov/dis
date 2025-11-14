@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """
-Quick test script to verify gesture control MIDI CC output.
-This script tracks your hand and sends MIDI CC messages without music generation.
-Use this to test your DAW setup and CC mappings.
+Test script to verify gesture control MIDI CC output without music generation.
 """
 
 import cv2
@@ -13,7 +11,7 @@ from collections import deque
 from gesture_control.hand_tracker import HandTracker
 
 class SimpleMIDITest:
-    """Simple test for MIDI CC from gesture control."""
+    """Test MIDI CC from gesture control."""
 
     CC_FILTER_CUTOFF = 74
     CC_RESONANCE = 71
@@ -91,11 +89,9 @@ class SimpleMIDITest:
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
-        # Give camera time to initialize and warm up
         print("Initializing camera...")
         time.sleep(1.0)
 
-        # Read and discard first few frames (camera warmup)
         for i in range(5):
             ret, _ = cap.read()
             if not ret:
@@ -118,7 +114,6 @@ class SimpleMIDITest:
         print("\nPress 'q' to quit\n")
         print("=" * 70)
 
-        # Buffers for smoothing
         buffer_x = deque(maxlen=5)
         buffer_y = deque(maxlen=5)
         last_cc_values = {}
@@ -137,7 +132,6 @@ class SimpleMIDITest:
                 frame = cv2.flip(frame, 1)
                 results, _ = tracker.process_frame(frame)
 
-                # Process hand data
                 if results.multi_hand_landmarks:
                     for hand_landmarks, handedness in zip(
                         results.multi_hand_landmarks,
@@ -146,26 +140,21 @@ class SimpleMIDITest:
                         hand_label = handedness.classification[0].label
                         landmarks = hand_landmarks.landmark
 
-                        # Get positions
                         index_tip = landmarks[8]
                         thumb_tip = landmarks[4]
 
-                        # Smooth positions
                         buffer_x.append(index_tip.x)
                         buffer_y.append(index_tip.y)
                         x_pos = sum(buffer_x) / len(buffer_x)
                         y_pos = sum(buffer_y) / len(buffer_y)
 
-                        # Calculate values
                         cutoff = self.normalize_to_midi(x_pos, 0.0, 1.0)
                         reverb = self.normalize_to_midi(1.0 - y_pos, 0.0, 1.0)
 
-                        # Calculate pinch distance
                         distance = ((thumb_tip.x - index_tip.x)**2 +
                                   (thumb_tip.y - index_tip.y)**2)**0.5
                         resonance = self.normalize_to_midi(distance, 0.0, 0.3)
 
-                        # Send CC messages (with change detection)
                         for cc_num, value in [(self.CC_FILTER_CUTOFF, cutoff),
                                              (self.CC_REVERB, reverb),
                                              (self.CC_RESONANCE, resonance)]:
@@ -173,10 +162,8 @@ class SimpleMIDITest:
                                 self.send_cc(cc_num, value)
                                 last_cc_values[cc_num] = value
 
-                        # Recognize gesture
                         gesture = tracker.recognize_gesture(landmarks, hand_label)
 
-                        # Gesture-based CC
                         if gesture == "Open Palm":
                             self.send_cc(self.CC_CHORUS, 127)
                             last_cc_values[self.CC_CHORUS] = 127
@@ -189,7 +176,6 @@ class SimpleMIDITest:
                             self.send_cc(self.CC_MODULATION, 127)
                             last_cc_values[self.CC_MODULATION] = 127
 
-                        # Display values on frame
                         info_y = 90
                         cv2.putText(frame, f"Filter (CC74): {cutoff}", (10, info_y),
                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
@@ -200,16 +186,13 @@ class SimpleMIDITest:
                         cv2.putText(frame, f"Gesture: {gesture}", (10, info_y + 90),
                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
 
-                # Draw hand visualization
                 frame = tracker.draw_hand_info(frame, results)
 
-                # Add title
                 cv2.putText(frame, "MIDI CC Test - Gesture Control", (10, 30),
                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
                 cv2.putText(frame, "Press 'q' to quit", (10, 60),
                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
 
-                # Show frame
                 cv2.imshow('MIDI CC Test', frame)
 
                 frame_count += 1
@@ -221,16 +204,13 @@ class SimpleMIDITest:
             print("\n\nStopping...")
 
         finally:
-            # Calculate stats
             elapsed = time.time() - start_time
             fps = frame_count / elapsed if elapsed > 0 else 0
 
-            # Cleanup
             cap.release()
             cv2.destroyAllWindows()
             tracker.release()
 
-            # Reset all CCs
             print("\nResetting MIDI CC values...")
             for cc in [self.CC_FILTER_CUTOFF, self.CC_RESONANCE,
                       self.CC_REVERB, self.CC_CHORUS, self.CC_MODULATION]:
