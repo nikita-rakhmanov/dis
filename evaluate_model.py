@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 """
-Model Evaluation Script for Music RNN
-
-Generates music samples and computes quantitative metrics for model comparison.
-Run this after training to evaluate model quality objectively.
+Model evaluation script for Music RNN. Generates samples and computes quantitative metrics.
 """
 
 import os
@@ -48,7 +45,6 @@ class ModelEvaluator:
             self.current_notes = seed / np.array([self.vocab_size, 1, 1])
             print(f"✓ Loaded seed from {seed_file}\n")
         else:
-            # Default C major scale
             seed_notes = []
             c_major = [0, 2, 4, 5, 7, 9, 11, 12]
             for i in range(self.sequence_length):
