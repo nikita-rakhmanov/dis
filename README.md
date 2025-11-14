@@ -45,7 +45,6 @@ dis/
 ├── QUICK_ABLETON_SETUP.md               # 5-minute Ableton setup
 ├── SETUP_LOCAL_MACHINE.md               # Local/webcam setup
 ├── VISUALIZATION_README.md              # 3D visualization docs
-├── daw_cc_config.json                   # DAW configuration examples
 ├── requirements.txt                     # Python dependencies
 └── README.md                            # This file
 ```
