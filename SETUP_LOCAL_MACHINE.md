@@ -97,11 +97,11 @@ ls /dev/video*
 
 Make sure these files exist after pulling:
 
-- ✅ `integrated_music_gesture_control.py` (main system)
-- ✅ `test_gesture_midi.py` (webcam test)
-- ✅ `test_gesture_midi_sim.py` (no webcam needed)
-- ✅ `gesture_control/hand_tracker.py` (hand tracking)
-- ✅ `ABLETON_MAPPING_GUIDE.md` (Ableton setup)
+- `integrated_music_gesture_control.py` (main system)
+- `test_gesture_midi.py` (webcam test)
+- `test_gesture_midi_sim.py` (no webcam needed)
+- `gesture_control/hand_tracker.py` (hand tracking)
+- `ABLETON_MAPPING_GUIDE.md` (Ableton setup)
 
 ## Workflow: Remote + Local
 
@@ -127,10 +127,10 @@ git status
 ls -la integrated_music_gesture_control.py test_gesture_midi.py
 
 # Check dependencies
-python -c "import cv2, mediapipe, mido; print('✓ All imports OK')"
+python -c "import cv2, mediapipe, mido; print('All imports OK')"
 
 # Test webcam
 python gesture_control/hand_tracker.py
 ```
 
-If everything works, you're ready to go!
+If all checks pass, the system is ready to use.

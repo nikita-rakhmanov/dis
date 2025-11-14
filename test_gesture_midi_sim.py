@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """
-Simulated Gesture Control MIDI CC Test
-No webcam required - uses keyboard/mouse input to simulate hand movements.
-Perfect for testing MIDI routing and DAW setup.
+Simulated gesture control test without webcam. Uses keyboard input to test MIDI routing.
 """
 
 import mido
@@ -12,7 +10,7 @@ import threading
 import random
 
 class SimulatedMIDITest:
-    """Simulate gesture control without a camera."""
+    """Simulate gesture control without webcam."""
 
     CC_FILTER_CUTOFF = 74
     CC_RESONANCE = 71
@@ -104,22 +102,17 @@ class SimulatedMIDITest:
         sweep_thread = None
 
         def auto_sweep():
-            """Auto-sweep all parameters."""
             nonlocal sweeping
             step = 0
             while sweeping:
-                # Create smooth sine wave movements
                 t = step / 20.0
 
-                # Filter: slow sweep
                 cutoff = int(64 + 63 * (0.5 + 0.5 * (t % 1.0)))
                 self.send_cc(self.CC_FILTER_CUTOFF, cutoff)
 
-                # Reverb: medium sweep
                 reverb = int(64 + 63 * (0.5 + 0.5 * ((t * 1.5) % 1.0)))
                 self.send_cc(self.CC_REVERB, reverb)
 
-                # Resonance: fast sweep
                 res = int(32 + 32 * (0.5 + 0.5 * ((t * 2.0) % 1.0)))
                 self.send_cc(self.CC_RESONANCE, res)
 
@@ -129,7 +122,6 @@ class SimulatedMIDITest:
                 time.sleep(0.05)
 
         def display_values():
-            """Show current CC values."""
             print(f"[CC] Filter:{current_values[self.CC_FILTER_CUTOFF]:3d} "
                   f"Reverb:{current_values[self.CC_REVERB]:3d} "
                   f"Res:{current_values[self.CC_RESONANCE]:3d} "
@@ -137,7 +129,6 @@ class SimulatedMIDITest:
                   f"Mod:{current_values[self.CC_MODULATION]:3d}")
 
         try:
-            # Non-blocking input simulation with commands
             while True:
                 try:
                     cmd = input("> ").strip().upper()
@@ -145,52 +136,47 @@ class SimulatedMIDITest:
                     if not cmd:
                         continue
 
-                    # Number keys 1-9: Filter Cutoff
                     if cmd in '123456789':
-                        val = int(cmd) * 14  # Map 1-9 to 14-126
+                        val = int(cmd) * 14
                         current_values[self.CC_FILTER_CUTOFF] = self.send_cc(self.CC_FILTER_CUTOFF, val)
                         print(f"✓ Filter Cutoff (CC 74) = {val}")
                         display_values()
 
-                    # Q-P keys: Reverb (10 levels)
                     elif cmd in 'QWERTYUIOP':
                         qwerty = 'QWERTYUIOP'
-                        val = qwerty.index(cmd) * 12  # Map to 0-120
+                        val = qwerty.index(cmd) * 12
                         current_values[self.CC_REVERB] = self.send_cc(self.CC_REVERB, val)
                         print(f"✓ Reverb (CC 91) = {val}")
                         display_values()
 
-                    # A-L keys: Resonance (12 levels)
                     elif cmd in 'ASDFGHJKL':
                         asdf = 'ASDFGHJKL'
-                        val = asdf.index(cmd) * 14  # Map to 0-126
+                        val = asdf.index(cmd) * 14
                         current_values[self.CC_RESONANCE] = self.send_cc(self.CC_RESONANCE, val)
                         print(f"✓ Resonance (CC 71) = {val}")
                         display_values()
 
-                    # Gestures
-                    elif cmd == 'O':  # Open Palm
+                    elif cmd == 'O':
                         current_values[self.CC_CHORUS] = self.send_cc(self.CC_CHORUS, 127)
                         print(f"✓ OPEN PALM → Chorus MAX (CC 93 = 127)")
                         display_values()
 
-                    elif cmd == 'F':  # Fist
+                    elif cmd == 'F':
                         current_values[self.CC_CHORUS] = self.send_cc(self.CC_CHORUS, 0)
                         current_values[self.CC_MODULATION] = self.send_cc(self.CC_MODULATION, 0)
                         print(f"✓ CLOSED FIST → Effects OFF")
                         display_values()
 
-                    elif cmd == 'R':  # Rock On
+                    elif cmd == 'R':
                         current_values[self.CC_MODULATION] = self.send_cc(self.CC_MODULATION, 127)
                         print(f"✓ ROCK ON → Modulation MAX (CC 1 = 127)")
                         display_values()
 
-                    elif cmd == 'P':  # Peace
+                    elif cmd == 'P':
                         current_values[self.CC_MODULATION] = self.send_cc(self.CC_MODULATION, 64)
                         print(f"✓ PEACE SIGN → Modulation MID (CC 1 = 64)")
                         display_values()
 
-                    # Auto-sweep
                     elif cmd == 'S':
                         if not sweeping:
                             sweeping = True
@@ -206,7 +192,6 @@ class SimulatedMIDITest:
                             print("\n✓ Auto-sweep STOPPED")
                             display_values()
 
-                    # Test sweep
                     elif cmd == 'T':
                         print("Testing all CC values (0-127 sweep)...")
                         for cc_num in [self.CC_FILTER_CUTOFF, self.CC_REVERB,
@@ -224,7 +209,6 @@ class SimulatedMIDITest:
                         print("✓ Test complete")
                         display_values()
 
-                    # Clear all
                     elif cmd == 'C':
                         for cc in [self.CC_FILTER_CUTOFF, self.CC_REVERB,
                                   self.CC_RESONANCE, self.CC_CHORUS, self.CC_MODULATION]:
@@ -232,7 +216,6 @@ class SimulatedMIDITest:
                         print("✓ All CC values reset to 0")
                         display_values()
 
-                    # Help
                     elif cmd == 'H':
                         self.print_controls()
 
@@ -248,7 +231,6 @@ class SimulatedMIDITest:
         finally:
             sweeping = False
 
-            # Reset all CCs
             print("\nResetting MIDI CC values...")
             for cc in [self.CC_FILTER_CUTOFF, self.CC_RESONANCE,
                       self.CC_REVERB, self.CC_CHORUS, self.CC_MODULATION]:

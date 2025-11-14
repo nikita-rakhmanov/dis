@@ -1,10 +1,6 @@
 # AI Music Generation with Gesture Control
 
-A real-time music generation and performance system that combines:
-- 🎵 **RNN-based MIDI music generation** using TensorFlow
-- 👋 **Hand gesture recognition** for real-time effects control
-- 🎛️ **DAW integration** via MIDI for professional music production
-- 🌐 **3D visualization** of music notes in real-time
+A real-time music generation and performance system combining RNN-based MIDI generation with hand gesture recognition for effects control.
 
 ## Features
 
@@ -21,10 +17,10 @@ A real-time music generation and performance system that combines:
 - Smooth, low-latency control of audio effects
 
 ### Integrated System
-- **Simultaneous operation**: Music generation + gesture control
-- **Thread-safe MIDI**: Both systems share the same MIDI port
-- **Dual-track routing**: Notes go to instrument, CC goes to effects
-- **WebSocket visualization**: See generated notes in 3D
+- Simultaneous operation of music generation and gesture control
+- Thread-safe MIDI port sharing between both systems
+- Dual-track routing: notes to instrument, CC to effects
+- Optional WebSocket-based 3D visualization
 
 ## Project Structure
 
@@ -35,16 +31,12 @@ dis/
 ├── train_music_rnn.py                   # Model training script
 ├── test_gesture_midi.py                 # Test gesture control (webcam)
 ├── test_gesture_midi_sim.py             # Test MIDI CC (no webcam)
-├── gesture_control/
-│   ├── hand_tracker.py                  # Hand tracking module
-│   ├── README.md                        # Module documentation
-│   ├── QUICKSTART.md                    # Quick start guide
-│   └── __init__.py
-├── GESTURE_CONTROL_GUIDE.md             # Detailed DAW setup guide
+├── gesture_control/                     # Gesture recognition module
+├── docs/                                # Technical documentation
+├── GESTURE_CONTROL_GUIDE.md             # DAW setup guide
 ├── ABLETON_MAPPING_GUIDE.md             # Ableton-specific guide
-├── QUICK_ABLETON_SETUP.md               # 5-minute Ableton setup
-├── SETUP_LOCAL_MACHINE.md               # Local/webcam setup
-├── VISUALIZATION_README.md              # 3D visualization docs
+├── QUICK_ABLETON_SETUP.md               # Quick Ableton setup
+├── SETUP_LOCAL_MACHINE.md               # Local machine setup
 ├── requirements.txt                     # Python dependencies
 └── README.md                            # This file
 ```
@@ -63,12 +55,12 @@ dis/
 pip install -r requirements.txt
 ```
 
-**Key Dependencies:**
-- `tensorflow` - RNN model
-- `mido` + `python-rtmidi` - MIDI I/O
-- `mediapipe` - Hand tracking
-- `opencv-python` - Video capture
-- `websockets` - Real-time visualization
+Key dependencies:
+- tensorflow - RNN model
+- mido + python-rtmidi - MIDI I/O
+- mediapipe - Hand tracking
+- opencv-python - Video capture
+- websockets - Real-time visualization
 
 ## Quick Start
 
@@ -113,15 +105,14 @@ You'll see:
 
 ### 4. Setup Your DAW
 
-**For Ableton Live users:** See **[ABLETON_MAPPING_GUIDE.md](ABLETON_MAPPING_GUIDE.md)** for detailed step-by-step instructions!
-
-**For other DAWs:** See **[GESTURE_CONTROL_GUIDE.md](GESTURE_CONTROL_GUIDE.md)**
+For Ableton Live: See [ABLETON_MAPPING_GUIDE.md](ABLETON_MAPPING_GUIDE.md)
+For other DAWs: See [GESTURE_CONTROL_GUIDE.md](GESTURE_CONTROL_GUIDE.md)
 
 Quick setup:
-1. Create **two MIDI tracks** in your DAW
-2. **Track 1**: Route to instrument (receives notes)
-3. **Track 2**: Route CC to effects (receives control messages)
-4. Add **Audio Effects Rack** with:
+1. Create two MIDI tracks in your DAW
+2. Track 1: Route to instrument (receives notes)
+3. Track 2: Route CC to effects (receives control messages)
+4. Add Audio Effects Rack with:
    - Low Pass Filter (map Frequency to CC 74, Resonance to CC 71)
    - Reverb/Delay (map Wet/Dry to CC 91)
    - Chorus (map Amount to CC 93)
@@ -286,7 +277,6 @@ class GestureMIDIController:
     CC_CHORUS = 93
     CC_MODULATION = 1
 ```
-    """Download the MAESTRO dataset if not present.
 
 ### Adjust Smoothing
 
@@ -317,23 +307,24 @@ Edit `gesture_control/hand_tracker.py` to add new gesture recognition logic.
 - **WebSockets** - Real-time visualization
 - **Three.js** - 3D graphics (visualization.html)
 
+## Documentation
+
+- [Ableton Mapping Guide](ABLETON_MAPPING_GUIDE.md) - Ableton Live setup
+- [Quick Ableton Setup](QUICK_ABLETON_SETUP.md) - 5-minute setup
+- [Gesture Control Guide](GESTURE_CONTROL_GUIDE.md) - General DAW setup
+- [Local Setup](SETUP_LOCAL_MACHINE.md) - Running with local webcam
+- [Gesture Module](gesture_control/README.md) - Hand tracking documentation
+
+### Technical Documentation
+
+- [Model Evaluation](docs/EVALUATION_GUIDE.md) - Model evaluation framework
+- [Architecture Analysis](docs/ARCHITECTURE_OPTIONS_ANALYSIS.md) - Model architecture options
+- [Optimization Analysis](docs/MODEL_OPTIMIZATION_ANALYSIS.md) - Optimization tracking
+- [GPU Training](docs/GPU_TRAINING_GUIDE.md) - GPU training instructions
+- [Visualization](docs/VISUALIZATION_README.md) - 3D visualization documentation
+- [Changes](docs/CHANGES_SUMMARY.md) - Change history
+
 ## License
 
-MIT License - Feel free to use and modify for your projects.
-
-## Contributing
-
-Contributions welcome! Areas for improvement:
-- Additional gesture recognition patterns
-- Multi-hand control (stereo effects)
-- MIDI velocity control from hand speed
-- Gesture-based note triggering
-- Machine learning for custom gesture training
-
-## Support
-
-For issues, questions, or suggestions:
-1. Check [GESTURE_CONTROL_GUIDE.md](GESTURE_CONTROL_GUIDE.md) or [ABLETON_MAPPING_GUIDE.md](ABLETON_MAPPING_GUIDE.md)
-2. Review troubleshooting section above
-3. Check [SETUP_LOCAL_MACHINE.md](SETUP_LOCAL_MACHINE.md) for webcam setup
+MIT License
 

@@ -2,17 +2,10 @@
 """
 Integrated Music Generation with Gesture Control
 
-This script combines:
-1. Real-time MIDI music generation (RNN model)
-2. Hand tracking for gesture-based effects control
-
-The music generator plays notes via MIDI while hand tracking
-sends MIDI CC (Control Change) messages to control audio effects
-in your DAW (delays, filters, reverb, etc.)
+Combines real-time MIDI music generation with hand tracking for gesture-based effects control.
 """
 
 import os
-# Fix for TensorFlow 2.16+ model compatibility with Keras 3.x
 os.environ['TF_USE_LEGACY_KERAS'] = '1'
 
 import numpy as np
@@ -30,12 +23,10 @@ import cv2
 import sys
 from collections import deque
 
-# Import hand tracker
 from gesture_control.hand_tracker import HandTracker
 from dual_model_polyphony import DualModelPolyphonySystem
 
-# Configuration
-SEQUENCE_LENGTH = 50  # Must match training script
+SEQUENCE_LENGTH = 50
 VOCAB_SIZE = 128
 KEY_ORDER = ['pitch', 'step', 'duration']
 
@@ -48,17 +39,14 @@ def mse_with_positive_pressure(y_true, y_pred):
 
 
 class GestureMIDIController:
-    """
-    Maps hand tracking data to MIDI CC messages for effects control.
-    """
+    """Maps hand tracking data to MIDI CC messages for effects control."""
 
-    # MIDI CC mapping
-    CC_FILTER_CUTOFF = 74  # Brightness/Filter Cutoff
-    CC_RESONANCE = 71      # Filter Resonance
-    CC_REVERB = 91         # Reverb/Delay Level
-    CC_CHORUS = 93         # Chorus/Modulation
-    CC_MODULATION = 1      # Modulation Wheel
-    CC_EXPRESSION = 11     # Expression
+    CC_FILTER_CUTOFF = 74
+    CC_RESONANCE = 71
+    CC_REVERB = 91
+    CC_CHORUS = 93
+    CC_MODULATION = 1
+    CC_EXPRESSION = 11
 
     def __init__(self, midi_out, update_rate=20):
         """
@@ -73,7 +61,6 @@ class GestureMIDIController:
         self.last_cc_values = {}
         self.midi_lock = threading.Lock()
 
-        # Smoothing buffers
         self.position_buffer_x = deque(maxlen=5)
         self.position_buffer_y = deque(maxlen=5)
 
@@ -89,15 +76,7 @@ class GestureMIDIController:
         return sum(buffer) / len(buffer)
 
     def send_cc(self, cc_number, value, channel=0):
-        """
-        Send MIDI CC message with duplicate suppression.
-
-        Args:
-            cc_number: MIDI CC number (0-127)
-            value: CC value (0-127)
-            channel: MIDI channel (0-15)
-        """
-        # Only send if value changed significantly (threshold of 2)
+        """Send MIDI CC message with duplicate suppression."""
         key = (cc_number, channel)
         if key in self.last_cc_values:
             if abs(self.last_cc_values[key] - value) < 2:
@@ -110,59 +89,38 @@ class GestureMIDIController:
             self.midi_out.send(msg)
 
     def process_hand_data(self, hand_landmarks, hand_label, gesture):
-        """
-        Process hand tracking data and send appropriate MIDI CC messages.
-
-        Args:
-            hand_landmarks: MediaPipe hand landmarks
-            hand_label: "Left" or "Right"
-            gesture: Detected gesture name
-        """
-        # Get wrist position as reference
+        """Process hand tracking data and send appropriate MIDI CC messages."""
         wrist = hand_landmarks[0]
         index_tip = hand_landmarks[8]
         thumb_tip = hand_landmarks[4]
 
-        # Smooth X and Y positions
         x_pos = self.smooth_value(self.position_buffer_x, index_tip.x)
         y_pos = self.smooth_value(self.position_buffer_y, index_tip.y)
 
-        # Map hand X position (0-1) to Filter Cutoff (CC 74)
-        # Left = dark/closed, Right = bright/open
         cutoff_value = self.normalize_to_midi(x_pos, 0.0, 1.0)
         self.send_cc(self.CC_FILTER_CUTOFF, cutoff_value)
 
-        # Map hand Y position to Reverb/Delay (CC 91)
-        # Up = more effect, Down = less effect
-        reverb_value = self.normalize_to_midi(1.0 - y_pos, 0.0, 1.0)  # Invert Y
+        reverb_value = self.normalize_to_midi(1.0 - y_pos, 0.0, 1.0)
         self.send_cc(self.CC_REVERB, reverb_value)
 
-        # Calculate distance between thumb and index for Resonance (CC 71)
         distance = np.sqrt((thumb_tip.x - index_tip.x)**2 +
                           (thumb_tip.y - index_tip.y)**2)
         resonance_value = self.normalize_to_midi(distance, 0.0, 0.3)
         self.send_cc(self.CC_RESONANCE, resonance_value)
 
-        # Gesture-based control
         if gesture == "Open Palm":
-            # Open palm = Maximum chorus/modulation
             self.send_cc(self.CC_CHORUS, 127)
         elif gesture == "Closed Fist":
-            # Closed fist = Minimum effects
             self.send_cc(self.CC_CHORUS, 0)
             self.send_cc(self.CC_MODULATION, 0)
         elif gesture == "Peace Sign":
-            # Peace sign = Medium modulation
             self.send_cc(self.CC_MODULATION, 64)
         elif gesture == "Rock On":
-            # Rock on = Maximum modulation
             self.send_cc(self.CC_MODULATION, 127)
 
 
 class IntegratedMusicGestureSystem:
-    """
-    Main system that integrates MIDI generation with gesture control.
-    """
+    """Integrates MIDI generation with gesture control."""
 
     def __init__(self, model_path, midi_port_name=None, enable_websocket=True,
                  ws_port=8765, enable_gesture=True, enable_polyphony=False,
@@ -187,7 +145,6 @@ class IntegratedMusicGestureSystem:
         )
         print("✓ Model loaded successfully!\n")
 
-        # Setup MIDI
         self._setup_midi(midi_port_name)
 
         self.seq_length = SEQUENCE_LENGTH
@@ -195,14 +152,12 @@ class IntegratedMusicGestureSystem:
         self.current_notes = None
         self.prev_start = 0
 
-        # WebSocket setup
         self.enable_websocket = enable_websocket
         self.ws_port = ws_port
         self.ws_clients = set()
         self.ws_server = None
         self.ws_loop = None
 
-        # Gesture control setup
         self.enable_gesture = enable_gesture
         self.gesture_controller = None
         self.hand_tracker = None
@@ -332,11 +287,9 @@ class IntegratedMusicGestureSystem:
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
-        # Give camera time to initialize
         print("Initializing gesture control camera...")
         time.sleep(1.0)
 
-        # Warmup: read and discard first few frames
         for i in range(5):
             ret, _ = cap.read()
             if not ret:
@@ -345,7 +298,6 @@ class IntegratedMusicGestureSystem:
         print("✓ Gesture control started (webcam active)")
         print("   Hand position controls Filter (X) and Reverb (Y)")
         print("   Gestures: Open Palm, Closed Fist, Peace, Rock On")
-        print("   Note: Webcam window disabled (macOS compatibility)")
         print()
 
         frame_interval = 1.0 / self.gesture_controller.update_rate
@@ -359,7 +311,6 @@ class IntegratedMusicGestureSystem:
             frame = cv2.flip(frame, 1)
             results, _ = self.hand_tracker.process_frame(frame)
 
-            # Process hand data for MIDI CC
             current_time = time.time()
             if current_time - last_update >= frame_interval:
                 if results.multi_hand_landmarks:
@@ -380,9 +331,6 @@ class IntegratedMusicGestureSystem:
 
                 last_update = current_time
 
-            # Note: cv2.imshow removed - causes crashes on macOS when called from background thread
-            # Gesture control works fine without the window display
-
         cap.release()
         self.hand_tracker.release()
         print("✓ Gesture control stopped")
@@ -399,9 +347,8 @@ class IntegratedMusicGestureSystem:
         )
         self.gesture_thread.start()
 
-        # Wait for camera to fully initialize before starting music
         print("Waiting for gesture control to initialize...")
-        time.sleep(3.0)  # Give camera time to fully initialize
+        time.sleep(3.0)
 
     def stop_gesture_control(self):
         """Stop gesture control thread."""
@@ -457,7 +404,6 @@ class IntegratedMusicGestureSystem:
     def generate(self, num_notes=None, temperature=2.0, velocity=80,
                  min_duration=0.1, max_duration=2.0, speed=1.0):
         """Generate and play music with gesture control."""
-        # Start services
         self.start_websocket_server()
         self.start_gesture_control()
 
@@ -563,14 +509,11 @@ class IntegratedMusicGestureSystem:
             print("\n" + "=" * 70)
             print("Stopping...")
         finally:
-            # Cleanup
             self.stop_gesture_control()
 
-            # Send all notes off
             for note in range(128):
                 self.midi_out.send(Message('note_off', note=note, velocity=0))
 
-            # Reset all CCs
             for cc in [1, 11, 71, 74, 91, 93]:
                 self.midi_out.send(Message('control_change', control=cc, value=0))
 
@@ -621,7 +564,6 @@ def main():
 
     args = parser.parse_args()
 
-    # Create integrated system
     system = IntegratedMusicGestureSystem(
         args.model,
         args.port,
@@ -632,10 +574,8 @@ def main():
         harmony_style=args.harmony_style
     )
 
-    # Load seed
     system.load_seed_sequence(args.seed)
 
-    # Generate music with gesture control
     system.generate(
         num_notes=args.num_notes,
         temperature=args.temperature,
