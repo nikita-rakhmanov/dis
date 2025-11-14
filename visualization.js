@@ -24,8 +24,8 @@ const camera = new THREE.PerspectiveCamera(
     0.1,
     1000
 );
-camera.position.set(0, 15, 40);  // Start further back for better view
-camera.lookAt(0, 10, 0);
+camera.position.set(0, 25, 20);  // Higher and closer to see notes better
+camera.lookAt(0, 15, -30);  // Look toward negative Z where notes appear
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -276,13 +276,14 @@ function animate() {
     const rotationSpeed = parseFloat(document.getElementById('rotation-speed').value) / 10000;
     noteGroup.rotation.y += rotationSpeed;
 
-    // DRAMATIC: Orbital camera movement
-    const cameraDistance = 40;
+    // DRAMATIC: Orbital camera movement around the note space
+    const cameraDistance = 50;
     const cameraSpeed = currentTime * 0.0001;
+    const orbitCenterZ = -30;  // Orbit around where notes appear
     camera.position.x = Math.sin(cameraSpeed) * cameraDistance;
-    camera.position.z = Math.cos(cameraSpeed) * cameraDistance;
-    camera.position.y = 15 + Math.sin(cameraSpeed * 0.5) * 5;
-    camera.lookAt(0, 10, 0);
+    camera.position.z = orbitCenterZ + Math.cos(cameraSpeed) * cameraDistance;
+    camera.position.y = 25 + Math.sin(cameraSpeed * 0.5) * 10;
+    camera.lookAt(0, 15, orbitCenterZ);  // Always look at note space center
 
     // DRAMATIC: Animate notes (pulsing and fading)
     notes.forEach((note, index) => {
