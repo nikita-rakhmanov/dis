@@ -19,6 +19,7 @@ class HandTracker:
 
         self.hands = self.mp_hands.Hands(
             static_image_mode=False,
+            model_complexity=1,
             max_num_hands=max_hands,
             min_detection_confidence=detection_confidence,
             min_tracking_confidence=tracking_confidence
@@ -39,6 +40,10 @@ class HandTracker:
 
     def process_frame(self, frame):
         """Process a video frame to detect hands."""
+        # Ensure frame is contiguous and has proper dimensions
+        if not frame.flags['C_CONTIGUOUS']:
+            frame = np.ascontiguousarray(frame)
+
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         rgb_frame.flags.writeable = False
 
