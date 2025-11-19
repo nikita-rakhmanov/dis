@@ -291,12 +291,6 @@ self.position_buffer_y = deque(maxlen=10)
 
 Edit `gesture_control/hand_tracker.py` to add new gesture recognition logic.
 
-## Files Generated
-
-- `music_rnn_model.keras` - Trained RNN model
-- `seed_sequence.npy` - Initial sequence for generation
-- `training_history.png` - Training metrics visualization
-- `generated_music.mid` - Sample MIDI output (from training)
 
 ## Credits and Technologies
 
@@ -307,24 +301,4 @@ Edit `gesture_control/hand_tracker.py` to add new gesture recognition logic.
 - **WebSockets** - Real-time visualization
 - **Three.js** - 3D graphics (visualization.html)
 
-## Documentation
-
-- [Ableton Mapping Guide](ABLETON_MAPPING_GUIDE.md) - Ableton Live setup
-- [Quick Ableton Setup](QUICK_ABLETON_SETUP.md) - 5-minute setup
-- [Gesture Control Guide](GESTURE_CONTROL_GUIDE.md) - General DAW setup
-- [Local Setup](SETUP_LOCAL_MACHINE.md) - Running with local webcam
-- [Gesture Module](gesture_control/README.md) - Hand tracking documentation
-
-### Technical Documentation
-
-- [Model Evaluation](docs/EVALUATION_GUIDE.md) - Model evaluation framework
-- [Architecture Analysis](docs/ARCHITECTURE_OPTIONS_ANALYSIS.md) - Model architecture options
-- [Optimization Analysis](docs/MODEL_OPTIMIZATION_ANALYSIS.md) - Optimization tracking
-- [GPU Training](docs/GPU_TRAINING_GUIDE.md) - GPU training instructions
-- [Visualization](docs/VISUALIZATION_README.md) - 3D visualization documentation
-- [Changes](docs/CHANGES_SUMMARY.md) - Change history
-
-## License
-
-MIT License
 
