@@ -17,8 +17,7 @@ import random
 
 class SimpleHarmonyGenerator:
     """
-    Rule-based harmony generator for quick prototyping.
-    This serves as Model 2 before training a real neural network.
+    Rule-based harmony generator for prototyping.
     """
 
     def __init__(self, style='classical'):

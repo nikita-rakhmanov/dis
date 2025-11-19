@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Safe model loading that handles version mismatches.
+LEGACY FILE THAT WAS USED DURING DEVELOPMENT AND TRAINING
 """
 
 import tensorflow as tf
@@ -25,10 +26,10 @@ def load_model_safe(model_path='music_rnn_model.keras'):
         print(f"Attempting to load {model_path}...")
         try:
             model = tf.keras.models.load_model(model_path, custom_objects=custom_objects)
-            print("✅ Model loaded successfully!")
+            print("Model loaded successfully!")
             return model
         except Exception as e:
-            print(f"⚠️  Failed to load .keras file: {e}")
+            print(f"Failed to load .keras file: {e}")
 
     # Method 2: Try loading .h5 file if available
     h5_path = model_path.replace('.keras', '.h5')
@@ -36,10 +37,10 @@ def load_model_safe(model_path='music_rnn_model.keras'):
         print(f"Attempting to load {h5_path}...")
         try:
             model = tf.keras.models.load_model(h5_path, custom_objects=custom_objects)
-            print("✅ Model loaded successfully from H5 format!")
+            print("Model loaded successfully from H5 format!")
             return model
         except Exception as e:
-            print(f"⚠️  Failed to load .h5 file: {e}")
+            print(f"Failed to load .h5 file: {e}")
 
     # Method 3: Rebuild model and load weights
     weights_path = model_path.replace('.keras', '_weights.h5')
@@ -49,12 +50,12 @@ def load_model_safe(model_path='music_rnn_model.keras'):
             from train_music_rnn import build_model, SEQUENCE_LENGTH, VOCAB_SIZE, LEARNING_RATE
             model = build_model(SEQUENCE_LENGTH, VOCAB_SIZE, LEARNING_RATE)
             model.load_weights(weights_path)
-            print("✅ Model rebuilt and weights loaded successfully!")
+            print("Model rebuilt and weights loaded successfully!")
             return model
         except Exception as e:
-            print(f"⚠️  Failed to rebuild and load weights: {e}")
+            print(f"Failed to rebuild and load weights: {e}")
 
-    print("\n❌ All model loading methods failed!")
+    print("\nAll model loading methods failed!")
     print("\nTroubleshooting:")
     print("1. Make sure you have the same TensorFlow version as training")
     print("2. Try: TF_USE_LEGACY_KERAS=1 python your_script.py")
