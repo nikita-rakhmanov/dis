@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Simulated gesture control test without webcam. Uses keyboard input to test MIDI routing.
+LEGACY FILE THAT WAS USED DURING DEVELOPMENT AND TRAINING
 """
 
 import mido
@@ -28,10 +29,10 @@ class SimulatedMIDITest:
         if midi_port_name:
             try:
                 self.midi_out = mido.open_output(midi_port_name)
-                print(f"\n✓ Connected to: {midi_port_name}\n")
+                print(f"\nConnected to: {midi_port_name}\n")
                 return
             except:
-                print(f"\n✗ Could not open port '{midi_port_name}'")
+                print(f"\nCould not open port '{midi_port_name}'")
 
         # Interactive selection
         if available_ports:
@@ -39,7 +40,7 @@ class SimulatedMIDITest:
                 idx = int(input("\nSelect port number (or press Enter for virtual): ").strip() or -1)
                 if 0 <= idx < len(available_ports):
                     self.midi_out = mido.open_output(available_ports[idx])
-                    print(f"✓ Connected to: {available_ports[idx]}\n")
+                    print(f"Connected to: {available_ports[idx]}\n")
                     return
             except:
                 pass
@@ -47,7 +48,7 @@ class SimulatedMIDITest:
         # Create virtual port
         print("\nCreating virtual MIDI port...")
         self.midi_out = mido.open_output('Gesture Control Test', virtual=True)
-        print("✓ Virtual port 'Gesture Control Test' created\n")
+        print("Virtual port 'Gesture Control Test' created\n")
 
     def send_cc(self, cc_number, value, channel=0):
         """Send MIDI CC message."""
@@ -139,42 +140,42 @@ class SimulatedMIDITest:
                     if cmd in '123456789':
                         val = int(cmd) * 14
                         current_values[self.CC_FILTER_CUTOFF] = self.send_cc(self.CC_FILTER_CUTOFF, val)
-                        print(f"✓ Filter Cutoff (CC 74) = {val}")
+                        print(f"Filter Cutoff (CC 74) = {val}")
                         display_values()
 
                     elif cmd in 'QWERTYUIOP':
                         qwerty = 'QWERTYUIOP'
                         val = qwerty.index(cmd) * 12
                         current_values[self.CC_REVERB] = self.send_cc(self.CC_REVERB, val)
-                        print(f"✓ Reverb (CC 91) = {val}")
+                        print(f"Reverb (CC 91) = {val}")
                         display_values()
 
                     elif cmd in 'ASDFGHJKL':
                         asdf = 'ASDFGHJKL'
                         val = asdf.index(cmd) * 14
                         current_values[self.CC_RESONANCE] = self.send_cc(self.CC_RESONANCE, val)
-                        print(f"✓ Resonance (CC 71) = {val}")
+                        print(f"Resonance (CC 71) = {val}")
                         display_values()
 
                     elif cmd == 'O':
                         current_values[self.CC_CHORUS] = self.send_cc(self.CC_CHORUS, 127)
-                        print(f"✓ OPEN PALM → Chorus MAX (CC 93 = 127)")
+                        print(f"OPEN PALM → Chorus MAX (CC 93 = 127)")
                         display_values()
 
                     elif cmd == 'F':
                         current_values[self.CC_CHORUS] = self.send_cc(self.CC_CHORUS, 0)
                         current_values[self.CC_MODULATION] = self.send_cc(self.CC_MODULATION, 0)
-                        print(f"✓ CLOSED FIST → Effects OFF")
+                        print(f"CLOSED FIST → Effects OFF")
                         display_values()
 
                     elif cmd == 'R':
                         current_values[self.CC_MODULATION] = self.send_cc(self.CC_MODULATION, 127)
-                        print(f"✓ ROCK ON → Modulation MAX (CC 1 = 127)")
+                        print(f"ROCK ON → Modulation MAX (CC 1 = 127)")
                         display_values()
 
                     elif cmd == 'P':
                         current_values[self.CC_MODULATION] = self.send_cc(self.CC_MODULATION, 64)
-                        print(f"✓ PEACE SIGN → Modulation MID (CC 1 = 64)")
+                        print(f"PEACE SIGN → Modulation MID (CC 1 = 64)")
                         display_values()
 
                     elif cmd == 'S':
@@ -182,14 +183,14 @@ class SimulatedMIDITest:
                             sweeping = True
                             sweep_thread = threading.Thread(target=auto_sweep, daemon=True)
                             sweep_thread.start()
-                            print("✓ Auto-sweep STARTED (press X to stop)")
+                            print("Auto-sweep STARTED (press X to stop)")
 
                     elif cmd == 'X':
                         if sweeping:
                             sweeping = False
                             if sweep_thread:
                                 sweep_thread.join(timeout=1.0)
-                            print("\n✓ Auto-sweep STOPPED")
+                            print("\nAuto-sweep STOPPED")
                             display_values()
 
                     elif cmd == 'T':
@@ -205,15 +206,15 @@ class SimulatedMIDITest:
                             for val in range(0, 128, 4):
                                 self.send_cc(cc_num, val)
                                 time.sleep(0.02)
-                            print(" Done!")
-                        print("✓ Test complete")
+                            print("Done")
+                        print("Test complete")
                         display_values()
 
                     elif cmd == 'C':
                         for cc in [self.CC_FILTER_CUTOFF, self.CC_REVERB,
                                   self.CC_RESONANCE, self.CC_CHORUS, self.CC_MODULATION]:
                             current_values[cc] = self.send_cc(cc, 0)
-                        print("✓ All CC values reset to 0")
+                        print("All CC values reset to 0")
                         display_values()
 
                     elif cmd == 'H':
@@ -237,7 +238,7 @@ class SimulatedMIDITest:
                 self.send_cc(cc, 0)
 
             self.midi_out.close()
-            print("✓ Test completed")
+            print("Test completed")
             print("=" * 70)
 
 
@@ -250,7 +251,7 @@ def main():
     parser.add_argument('--port', default=None, help='MIDI port name')
     args = parser.parse_args()
 
-    print("\n🎛️  GESTURE CONTROL SIMULATOR (No webcam required)\n")
+    print("\nGESTURE CONTROL SIMULATOR (No webcam required)\n")
 
     tester = SimulatedMIDITest(args.port)
     tester.test_interactive()

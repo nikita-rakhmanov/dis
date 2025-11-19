@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Test script to verify gesture control MIDI CC output without music generation.
+LEGACY FILE THAT WAS USED DURING DEVELOPMENT AND TRAINING
 """
 
 import cv2

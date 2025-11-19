@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Convert model to be compatible with different TensorFlow versions.
-Run this on the GPU machine after training.
+This is used on the GPU machine after training.
+LEGACY FILE THAT WAS USED DURING DEVELOPMENT AND TRAINING
 """
 
 import tensorflow as tf
@@ -34,7 +35,7 @@ weights_path = 'music_rnn_weights.h5'
 print(f"Saving weights to {weights_path}...")
 model.save_weights(weights_path)
 
-print("\n✅ Conversion complete!")
+print("\n Conversion complete!")
 print("Files created:")
 print(f"  - {h5_path} (full model in H5 format)")
 print(f"  - {weights_path} (weights only)")

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Model evaluation script for Music RNN. Generates samples and computes quantitative metrics.
+Model evaluation script for Music RNNs. Generates samples and computes quantitative metrics.
 """
 
 import os
@@ -32,7 +32,7 @@ class ModelEvaluator:
             model_path,
             custom_objects={'mse_with_positive_pressure': mse_with_positive_pressure}
         )
-        print("✓ Model loaded\n")
+        print("Model loaded\n")
 
         self.sequence_length = self.model.input_shape[1]
         self.vocab_size = 128

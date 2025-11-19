@@ -7,9 +7,9 @@ const CONFIG = {
     rotationSpeed: 0.003,
     noteScale: 0.8,  // Larger spheres for more dramatic effect
     spaceScale: {
-        pitch: 2.5,   // DRAMATIC: For 1 octave (12 notes) → ~(-15 to 15)
-        duration: 20, // DRAMATIC: Duration (0-2s) → (0 to 40)
-        step: 15      // DRAMATIC: Z-axis depth for timing
+        pitch: 2.5,   // For 1 octave (12 notes) → ~(-15 to 15)
+        duration: 20, // Duration (0-2s) → (0 to 40)
+        step: 15      // Z-axis depth for timing
     }
 };
 
@@ -276,7 +276,7 @@ function animate() {
     const rotationSpeed = parseFloat(document.getElementById('rotation-speed').value) / 10000;
     noteGroup.rotation.y += rotationSpeed;
 
-    // DRAMATIC: Orbital camera movement around the note space
+    // Orbital camera movement around the note space
     const cameraDistance = 50;
     const cameraSpeed = currentTime * 0.0001;
     const orbitCenterZ = -30;  // Orbit around where notes appear
@@ -285,7 +285,7 @@ function animate() {
     camera.position.y = 25 + Math.sin(cameraSpeed * 0.5) * 10;
     camera.lookAt(0, 15, orbitCenterZ);  // Always look at note space center
 
-    // DRAMATIC: Animate notes (pulsing and fading)
+    // Animate notes (pulsing and fading)
     notes.forEach((note, index) => {
         const age = currentTime - note.creationTime;
         const maxAge = 30000; // 30 seconds
@@ -355,8 +355,6 @@ function animate() {
 // ==================== Controls ====================
 document.getElementById('particle-density').addEventListener('input', (e) => {
     const newCount = parseInt(e.target.value);
-    // Note: For simplicity, we're just updating the display
-    // A full implementation would recreate the particle system
     document.getElementById('particle-count').textContent = newCount;
 });
 
@@ -374,5 +372,5 @@ document.getElementById('particle-count').textContent = particleCount;
 connectWebSocket();
 animate();
 
-console.log('🎵 Music Visualization initialized');
+console.log('Music Visualization initialized');
 console.log('Waiting for MIDI data from realtime_midi_generator.py...');

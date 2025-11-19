@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Real-time MIDI music generator using a trained RNN model.
+LEGACY FILE THAT WAS USED DURING DEVELOPMENT AND TRAINING
 """
 
 import os
@@ -39,7 +40,7 @@ class RealtimeMusicGenerator:
             model_path,
             custom_objects={'mse_with_positive_pressure': mse_with_positive_pressure}
         )
-        print("✓ Model loaded successfully!\n")
+        print("Model loaded successfully!\n")
 
         self._setup_midi(midi_port_name)
 
@@ -64,10 +65,10 @@ class RealtimeMusicGenerator:
         if port_name:
             try:
                 self.midi_out = mido.open_output(port_name)
-                print(f"\n✓ Connected to: {port_name}\n")
+                print(f"\nConnected to: {port_name}\n")
                 return
             except:
-                print(f"\n✗ Could not open port '{port_name}'")
+                print(f"\nCould not open port '{port_name}'")
 
         if available_ports:
             try:
@@ -81,7 +82,7 @@ class RealtimeMusicGenerator:
 
         print("\nCreating virtual MIDI port...")
         self.midi_out = mido.open_output('RNN Music Generator', virtual=True)
-        print("✓ Virtual port 'RNN Music Generator' created\n")
+        print("Virtual port 'RNN Music Generator' created\n")
     
     def load_seed_sequence(self, seed_file=None):
         """Load or create seed sequence."""
@@ -89,10 +90,10 @@ class RealtimeMusicGenerator:
             try:
                 seed = np.load(seed_file)
                 self.current_notes = seed / np.array([self.vocab_size, 1, 1])
-                print(f"✓ Loaded seed sequence from {seed_file}")
+                print(f"Loaded seed sequence from {seed_file}")
                 return
             except:
-                print(f"✗ Could not load {seed_file}, using default seed")
+                print(f"Could not load {seed_file}, using default seed")
 
         seed_notes = []
         c_major = [0, 2, 4, 5, 7, 9, 11, 12]
@@ -104,18 +105,18 @@ class RealtimeMusicGenerator:
 
         seed_notes = np.array(seed_notes)
         self.current_notes = seed_notes / np.array([self.vocab_size, 1, 1])
-        print("✓ Using default C major scale seed")
+        print("Using default C major scale seed")
 
     async def ws_handler(self, websocket):
         """Handle WebSocket connections."""
         self.ws_clients.add(websocket)
         client_ip = websocket.remote_address[0] if websocket.remote_address else 'unknown'
-        print(f"🌐 Visualization client connected from {client_ip} (total: {len(self.ws_clients)})")
+        print(f"Visualization client connected from {client_ip} (total: {len(self.ws_clients)})")
         try:
             await websocket.wait_closed()
         finally:
             self.ws_clients.remove(websocket)
-            print(f"🌐 Visualization client disconnected (total: {len(self.ws_clients)})")
+            print(f"Visualization client disconnected (total: {len(self.ws_clients)})")
 
     async def broadcast_note(self, note_data):
         """Broadcast note data to all connected WebSocket clients."""
@@ -137,7 +138,7 @@ class RealtimeMusicGenerator:
 
             async def server():
                 async with websockets.serve(self.ws_handler, "0.0.0.0", self.ws_port):
-                    print(f"🌐 WebSocket server started on ws://localhost:{self.ws_port}")
+                    print(f"WebSocket server started on ws://localhost:{self.ws_port}")
                     print("   Open visualization.html in your browser to see the 3D visualization\n")
                     await asyncio.Future()
 
@@ -204,7 +205,7 @@ class RealtimeMusicGenerator:
                 duration = max(min_duration, min(max_duration, duration))
 
                 note_name = self._pitch_to_name(pitch)
-                print(f"♪ {count+1:4d}: {note_name:4s} (pitch={pitch:3d}) "
+                print(f"{count+1:4d}: {note_name:4s} (pitch={pitch:3d}) "
                       f"step={step:5.3f}s dur={duration:5.3f}s")
 
                 note_data = {
@@ -232,7 +233,7 @@ class RealtimeMusicGenerator:
             for note in range(128):
                 self.midi_out.send(Message('note_off', note=note, velocity=0))
             self.midi_out.close()
-            print("✓ MIDI port closed")
+            print("MIDI port closed")
             print("=" * 60)
     
     @staticmethod

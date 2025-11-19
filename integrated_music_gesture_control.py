@@ -2,7 +2,6 @@
 """
 Integrated Music Generation with Gesture Control
 
-Combines real-time MIDI music generation with hand tracking for gesture-based effects control.
 """
 
 import os
@@ -143,7 +142,7 @@ class IntegratedMusicGestureSystem:
             model_path,
             custom_objects={'mse_with_positive_pressure': mse_with_positive_pressure}
         )
-        print("✓ Model loaded successfully!\n")
+        print("Model loaded successfully!\n")
 
         self._setup_midi(midi_port_name)
 
@@ -240,12 +239,12 @@ class IntegratedMusicGestureSystem:
         """Handle WebSocket connections."""
         self.ws_clients.add(websocket)
         client_ip = websocket.remote_address[0] if websocket.remote_address else 'unknown'
-        print(f"🌐 Visualization client connected from {client_ip}")
+        print(f"Visualization client connected from {client_ip}")
         try:
             await websocket.wait_closed()
         finally:
             self.ws_clients.remove(websocket)
-            print(f"🌐 Visualization client disconnected")
+            print(f"Visualization client disconnected")
 
     async def broadcast_note(self, note_data):
         """Broadcast note data to WebSocket clients."""
@@ -267,7 +266,7 @@ class IntegratedMusicGestureSystem:
 
             async def server():
                 async with websockets.serve(self.ws_handler, "0.0.0.0", self.ws_port):
-                    print(f"🌐 WebSocket server started on ws://localhost:{self.ws_port}")
+                    print(f"WebSocket server started on ws://localhost:{self.ws_port}")
                     await asyncio.Future()
 
             self.ws_loop.run_until_complete(server())
@@ -281,7 +280,7 @@ class IntegratedMusicGestureSystem:
         cap = cv2.VideoCapture(0)
 
         if not cap.isOpened():
-            print("✗ Could not open webcam for gesture control")
+            print("Could not open webcam for gesture control")
             return
 
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
@@ -295,9 +294,9 @@ class IntegratedMusicGestureSystem:
             if not ret:
                 print(f"Warning: Camera warmup frame {i+1}/5 failed")
 
-        print("✓ Gesture control started (webcam active)")
-        print("   Hand position controls Filter (X) and Reverb (Y)")
-        print("   Gestures: Open Palm, Closed Fist, Peace, Rock On")
+        print("Gesture control started (webcam active)")
+        print("Hand position controls Filter (X) and Reverb (Y)")
+        print("Gestures: Open Palm, Closed Fist, Peace, Rock On")
         print()
 
         frame_interval = 1.0 / self.gesture_controller.update_rate
@@ -333,7 +332,7 @@ class IntegratedMusicGestureSystem:
 
         cap.release()
         self.hand_tracker.release()
-        print("✓ Gesture control stopped")
+        print("Gesture control stopped")
 
     def start_gesture_control(self):
         """Start gesture control in background thread."""
