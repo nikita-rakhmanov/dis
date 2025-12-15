@@ -440,79 +440,7 @@ class ParticleSystem {
     }
 }
 
-// ==================== NEW: Starfield Background ====================
-class StarfieldBackground {
-    constructor() {
-        this.layers = [];
-        this.musicIntensity = 0;
-        this.initLayers();
-    }
-
-    initLayers() {
-        this.layers = [];
-        for (const layerConfig of CONFIG.starfieldLayers) {
-            const stars = [];
-            for (let i = 0; i < layerConfig.count; i++) {
-                stars.push({
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * canvas.height,
-                    baseOpacity: layerConfig.opacity * (0.5 + Math.random() * 0.5),
-                    twinklePhase: Math.random() * Math.PI * 2,
-                    twinkleSpeed: 0.001 + Math.random() * 0.002
-                });
-            }
-            this.layers.push({
-                stars,
-                config: layerConfig
-            });
-        }
-    }
-
-    setMusicIntensity(velocity) {
-        // Smooth intensity transition
-        const targetIntensity = velocity / 127;
-        this.musicIntensity += (targetIntensity - this.musicIntensity) * 0.1;
-    }
-
-    update(time) {
-        for (const layer of this.layers) {
-            const speed = layer.config.speed * (1 + this.musicIntensity * CONFIG.starfieldReactivity);
-            for (const star of layer.stars) {
-                // Move stars slowly to the left for subtle motion
-                star.x -= speed;
-                if (star.x < 0) {
-                    star.x = canvas.width;
-                    star.y = Math.random() * canvas.height;
-                }
-            }
-        }
-    }
-
-    render(ctx, time) {
-        if (!CONFIG.starfieldEnabled) return;
-
-        ctx.save();
-
-        for (const layer of this.layers) {
-            const intensityBoost = 1 + this.musicIntensity * CONFIG.starfieldReactivity;
-
-            for (const star of layer.stars) {
-                const twinkle = 0.5 + 0.5 * Math.sin(time * star.twinkleSpeed + star.twinklePhase);
-                const opacity = star.baseOpacity * twinkle * intensityBoost;
-
-                ctx.globalAlpha = Math.min(1, opacity);
-                ctx.fillStyle = '#ffffff';
-                ctx.beginPath();
-                ctx.arc(star.x, star.y, layer.config.size, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-
-        ctx.restore();
-    }
-}
-
-// ==================== NEW: Synthwave Grid ====================
+// ==================== Synthwave Grid ====================
 class SynthwaveGrid {
     constructor() {
         this.gridOffset = 0;
@@ -879,8 +807,7 @@ const trails = [];
 const chordLines = [];  // For polyphony chord connections
 const particleSystem = new ParticleSystem(CONFIG.particleCount);
 
-// NEW: Background and overlay systems
-const starfield = new StarfieldBackground();
+// Background and overlay systems
 const synthwaveGrid = new SynthwaveGrid();
 const handOverlay = new HandTrackingOverlay();
 const startGestureOverlay = new StartGestureOverlay();
@@ -980,12 +907,11 @@ function connectWebSocket() {
                     // Block notes until start gesture is completed
                     if (!startGestureOverlay.shouldBlockNotes()) {
                         addNote(data);
-                        // NEW: Update starfield and grid intensity
-                        starfield.setMusicIntensity(data.velocity);
+                        // Update grid intensity on notes
                         synthwaveGrid.pulse(data.velocity);
                     }
                 }
-                // NEW: Handle hand tracking data
+                // Handle hand tracking data
                 else if (data.type === 'hand_data') {
                     handOverlay.update(data);
                     // Update start gesture overlay
@@ -1077,11 +1003,7 @@ function animate() {
     renderer.clear();
     renderer.resetState();
 
-    // NEW: Render starfield background BEFORE zoom transform (fixed background)
-    starfield.update(currentTime);
-    starfield.render(ctx, currentTime);
-
-    // NEW: Render synthwave grid
+    // Render synthwave grid
     synthwaveGrid.render(ctx, currentTime);
 
     // Apply zoom transform
@@ -1123,13 +1045,13 @@ function animate() {
     // Restore context after zoom transform
     ctx.restore();
 
-    // NEW: Render hand tracking overlay AFTER restore (so it's not zoomed/transformed)
+    // Render hand tracking overlay AFTER restore (so it's not zoomed/transformed)
     // Reset context state to ensure hands are visible
     ctx.globalAlpha = 1;
     ctx.shadowBlur = 0;
     handOverlay.render(ctx);
 
-    // NEW: Render start gesture overlay on top of everything
+    // Render start gesture overlay on top of everything
     startGestureOverlay.render(ctx);
 }
 
