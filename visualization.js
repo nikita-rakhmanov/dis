@@ -1,189 +1,480 @@
 // ==================== Configuration ====================
 const CONFIG = {
+    // WebSocket
     websocketUrl: 'ws://localhost:8765',
     reconnectInterval: 3000,
+
+    // Display
+    fontSize: 14,
+    fontFamily: '"Courier New", Consolas, monospace',
+
+    // Notes (ASCII Spheres)
+    noteChars: ['@', '#', '%', '&', '*', 'O', '●', '◉', '○', '◎'],
+    sphereLayers: [
+        { chars: ['◉', '●', '@'], radiusRatio: 0.3, density: 8 },
+        { chars: ['O', '#', '%'], radiusRatio: 0.6, density: 12 },
+        { chars: ['○', '*', '·'], radiusRatio: 1.0, density: 16 },
+    ],
+    maxNotes: 100,
+    notePulseSpeed: 0.004,
+    notePulseAmount: 0.25,
+    noteBaseRadius: 25,
+    noteFadeTime: 30000,
+
+    // Trails
+    trailChars: ['●', '•', '·', '.'],
     maxTrailLength: 100,
-    particleCount: 500,
-    rotationSpeed: 0.003,
-    noteScale: 0.8,  // Larger spheres for more dramatic effect
+    trailFadeSpeed: 0.02,
+
+    // Particles
+    particleChars: ['✦', '✧', '*', '·', '+', '×', '○', '◦', '.'],
+    particleCount: 150,
+    particleSpeedMin: 0.2,
+    particleSpeedMax: 0.6,
+
+    // Visual
+    backgroundColor: '#000510',
+    glowEnabled: true,
+    glowBlur: 6,
+
+    // Space mapping
     spaceScale: {
-        pitch: 2.5,   // For 1 octave (12 notes) → ~(-15 to 15)
-        duration: 20, // Duration (0-2s) → (0 to 40)
-        step: 15      // Z-axis depth for timing
-    }
+        pitch: 25,
+        duration: 80,
+        step: 0.5
+    },
+
+    // Camera settings
+    orbitEnabled: true,
+    orbitSpeed: 0.0005,
+    orbitAmplitude: 60,
+    orbitYAmplitude: 30,
+
+    // Zoom
+    zoomLevel: 1.3,              // Camera zoom (1 = normal, >1 = zoomed in)
+
+    // Note-tracking camera
+    trackingEnabled: true,
+    trackingSmoothing: 0.03,
+    trackingRecentNotes: 5,
+    trackingCenterX: 0.5,
+    trackingCenterY: 0.5,
+    trackingStrength: 0.7,
+
+    // Reactive shake on big pitch jumps
+    shakeEnabled: false,
+    shakePitchThreshold: 25,     // Minimum pitch difference to trigger shake
+    shakeIntensity: 15,          // Max shake amount in pixels
+    shakeDecay: 0.85             // How fast shake fades (0.8 = fast, 0.95 = slow)
 };
 
-// ==================== Scene Setup ====================
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x000510);
-scene.fog = new THREE.FogExp2(0x000510, 0.015);
+// ==================== Canvas Setup ====================
+const canvas = document.createElement('canvas');
+const ctx = canvas.getContext('2d', { alpha: false });
+document.getElementById('canvas-container').appendChild(canvas);
 
-const camera = new THREE.PerspectiveCamera(
-    75,
-    window.innerWidth / window.innerHeight,
-    0.1,
-    1000
-);
-camera.position.set(0, 25, 20);  // Higher and closer to see notes better
-camera.lookAt(0, 15, -30);  // Look toward negative Z where notes appear
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
-document.getElementById('canvas-container').appendChild(renderer.domElement);
-
-// ==================== Lighting ====================
-const ambientLight = new THREE.AmbientLight(0x404040, 1);
-scene.add(ambientLight);
-
-const pointLight1 = new THREE.PointLight(0x00ffff, 2, 100);
-pointLight1.position.set(0, 20, 20);
-scene.add(pointLight1);
-
-const pointLight2 = new THREE.PointLight(0xff00ff, 1.5, 100);
-pointLight2.position.set(-20, 10, -20);
-scene.add(pointLight2);
-
-// ==================== Particle System ====================
-const particleGeometry = new THREE.BufferGeometry();
-const particleCount = CONFIG.particleCount;
-const particlePositions = new Float32Array(particleCount * 3);
-const particleVelocities = [];
-
-for (let i = 0; i < particleCount; i++) {
-    particlePositions[i * 3] = (Math.random() - 0.5) * 100;
-    particlePositions[i * 3 + 1] = (Math.random() - 0.5) * 100;
-    particlePositions[i * 3 + 2] = (Math.random() - 0.5) * 100;
-
-    particleVelocities.push({
-        x: (Math.random() - 0.5) * 0.02,
-        y: (Math.random() - 0.5) * 0.02,
-        z: (Math.random() - 0.5) * 0.02
-    });
+// ==================== Precomputed Data ====================
+function generateSpherePattern() {
+    const patterns = [];
+    for (let layerIdx = 0; layerIdx < CONFIG.sphereLayers.length; layerIdx++) {
+        const layer = CONFIG.sphereLayers[layerIdx];
+        const layerPattern = [];
+        for (let i = 0; i < layer.density; i++) {
+            layerPattern.push({
+                angleOffset: (i / layer.density) * Math.PI * 2,
+                distanceFactor: 0.5 + Math.random() * 0.5,
+                char: layer.chars[i % layer.chars.length]
+            });
+        }
+        patterns.push(layerPattern);
+    }
+    return patterns;
 }
 
-particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
-
-const particleMaterial = new THREE.PointsMaterial({
-    color: 0x4488ff,
-    size: 0.2,
-    transparent: true,
-    opacity: 0.6,
-    blending: THREE.AdditiveBlending
-});
-
-const particleSystem = new THREE.Points(particleGeometry, particleMaterial);
-scene.add(particleSystem);
-
-// ==================== Note Visualization ====================
-const notes = [];
-const noteGroup = new THREE.Group();
-scene.add(noteGroup);
-
-function midiToPosition(pitch, step, duration) {
-    return new THREE.Vector3(
-        (pitch - 64) * CONFIG.spaceScale.pitch,  // Center around middle C (64)
-        duration * CONFIG.spaceScale.duration,
-        -step * CONFIG.spaceScale.step
-    );
+const spherePatterns = [];
+for (let i = 0; i < 20; i++) {
+    spherePatterns.push(generateSpherePattern());
 }
 
+// ==================== Color Utilities ====================
 function velocityToColor(velocity) {
-    // Map velocity (0-127) to color gradient (red -> yellow -> green -> cyan -> blue)
     const normalized = velocity / 127;
-    const hue = normalized * 0.7; // 0 (red) to 0.7 (blue)
-    return new THREE.Color().setHSL(hue, 1.0, 0.5);
+    const hue = normalized * 252; // 0 (red) to 252 (blue)
+    return `hsl(${hue}, 100%, 60%)`;
 }
 
-function addNote(noteData) {
-    const position = midiToPosition(noteData.pitch, noteData.step, noteData.duration);
-    const color = velocityToColor(noteData.velocity);
-
-    // Size varies with velocity for dramatic effect
-    const sizeMultiplier = 0.7 + (noteData.velocity / 127) * 0.6; // 0.7 to 1.3
-    const noteSize = CONFIG.noteScale * sizeMultiplier;
-
-    // Create note sphere
-    const geometry = new THREE.SphereGeometry(noteSize, 32, 32);
-    const material = new THREE.MeshPhongMaterial({
-        color: color,
-        emissive: color,
-        emissiveIntensity: 0.8,  // Brighter emission
-        shininess: 100
-    });
-
-    const noteSphere = new THREE.Mesh(geometry, material);
-    noteSphere.position.copy(position);
-
-    // Add larger, brighter glow effect
-    const glowGeometry = new THREE.SphereGeometry(noteSize * 2.5, 32, 32);
-    const glowMaterial = new THREE.MeshBasicMaterial({
-        color: color,
-        transparent: true,
-        opacity: 0.5,
-        blending: THREE.AdditiveBlending
-    });
-    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
-    noteSphere.add(glow);
-
-    // Add outer rim glow
-    const outerGlowGeometry = new THREE.SphereGeometry(noteSize * 4, 32, 32);
-    const outerGlowMaterial = new THREE.MeshBasicMaterial({
-        color: color,
-        transparent: true,
-        opacity: 0.15,
-        blending: THREE.AdditiveBlending
-    });
-    const outerGlow = new THREE.Mesh(outerGlowGeometry, outerGlowMaterial);
-    noteSphere.add(outerGlow);
-
-    noteGroup.add(noteSphere);
-
-    // Draw thicker, more visible line to previous note
-    if (notes.length > 0) {
-        const prevNote = notes[notes.length - 1];
-
-        // Create tube geometry for thicker line
-        const curve = new THREE.LineCurve3(prevNote.position.clone(), position);
-        const tubeGeometry = new THREE.TubeGeometry(curve, 20, 0.1, 8, false);
-        const tubeMaterial = new THREE.MeshBasicMaterial({
-            color: color,
-            transparent: true,
-            opacity: 0.7,
-            blending: THREE.AdditiveBlending
-        });
-        const tube = new THREE.Mesh(tubeGeometry, tubeMaterial);
-        noteGroup.add(tube);
-
-        notes[notes.length - 1].line = tube;
-        notes[notes.length - 1].lineOpacity = 0.7;
+// ==================== Optimized ASCII Renderer ====================
+class ASCIIRenderer {
+    constructor(context) {
+        this.ctx = context;
+        this.baseFont = `${CONFIG.fontSize}px ${CONFIG.fontFamily}`;
     }
 
-    notes.push({
-        mesh: noteSphere,
-        position: position,
-        data: noteData,
-        creationTime: Date.now(),
-        baseScale: sizeMultiplier,
-        glow: glow,
-        outerGlow: outerGlow
-    });
+    clear() {
+        this.ctx.fillStyle = CONFIG.backgroundColor;
+        this.ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
 
-    // Manage trail length
-    const maxLength = parseInt(document.getElementById('trail-length').value);
-    while (notes.length > maxLength) {
-        const oldNote = notes.shift();
-        noteGroup.remove(oldNote.mesh);
-        if (oldNote.line) {
-            noteGroup.remove(oldNote.line);
+    drawChar(char, x, y, color, scale = 1, opacity = 1, glow = false) {
+        if (opacity < 0.05) return;
+
+        this.ctx.globalAlpha = opacity;
+        this.ctx.fillStyle = color;
+
+        if (glow && CONFIG.glowEnabled) {
+            this.ctx.shadowColor = color;
+            this.ctx.shadowBlur = CONFIG.glowBlur;
+        } else {
+            this.ctx.shadowBlur = 0;
+        }
+
+        if (scale !== 1) {
+            this.ctx.font = `${CONFIG.fontSize * scale}px ${CONFIG.fontFamily}`;
+        } else {
+            this.ctx.font = this.baseFont;
+        }
+
+        this.ctx.fillText(char, x, y);
+    }
+
+    drawSphere(centerX, centerY, baseRadius, color, pulsePhase, opacity = 1, patternIdx = 0) {
+        if (opacity < 0.05) return;
+
+        const pulse = 1 + Math.sin(pulsePhase) * CONFIG.notePulseAmount;
+        const radius = baseRadius * pulse;
+        const pattern = spherePatterns[patternIdx % spherePatterns.length];
+
+        this.ctx.fillStyle = color;
+        this.ctx.font = this.baseFont;
+
+        for (let layerIdx = CONFIG.sphereLayers.length - 1; layerIdx >= 0; layerIdx--) {
+            const layer = CONFIG.sphereLayers[layerIdx];
+            const layerRadius = radius * layer.radiusRatio;
+            const layerPattern = pattern[layerIdx];
+            const charOpacity = opacity * (1 - layerIdx * 0.2);
+
+            if (charOpacity < 0.05) continue;
+
+            this.ctx.globalAlpha = charOpacity;
+
+            if (layerIdx === 0 && CONFIG.glowEnabled) {
+                this.ctx.shadowColor = color;
+                this.ctx.shadowBlur = CONFIG.glowBlur;
+            } else {
+                this.ctx.shadowBlur = 0;
+            }
+
+            for (const point of layerPattern) {
+                const angle = point.angleOffset + pulsePhase * 0.3;
+                const dist = layerRadius * point.distanceFactor;
+                const x = centerX + Math.cos(angle) * dist;
+                const y = centerY + Math.sin(angle) * dist;
+                this.ctx.fillText(point.char, x, y);
+            }
+        }
+
+        if (CONFIG.glowEnabled) {
+            this.ctx.shadowColor = color;
+            this.ctx.shadowBlur = CONFIG.glowBlur * 1.5;
+        }
+        this.ctx.globalAlpha = opacity;
+        this.ctx.font = `${CONFIG.fontSize * 1.5}px ${CONFIG.fontFamily}`;
+        this.ctx.fillText(CONFIG.noteChars[0], centerX, centerY);
+        this.ctx.shadowBlur = 0;
+    }
+
+    drawTrail(x1, y1, x2, y2, color, opacity) {
+        if (opacity < 0.05) return;
+
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const steps = Math.max(3, Math.floor(distance / 20));
+
+        this.ctx.fillStyle = color;
+        this.ctx.font = this.baseFont;
+        this.ctx.shadowBlur = 0;
+
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const x = x1 + dx * t;
+            const y = y1 + dy * t;
+            const charIdx = Math.min(Math.floor(t * CONFIG.trailChars.length), CONFIG.trailChars.length - 1);
+            const charOpacity = opacity * (0.4 + 0.6 * (1 - t));
+
+            this.ctx.globalAlpha = charOpacity;
+            this.ctx.fillText(CONFIG.trailChars[charIdx], x, y);
         }
     }
 
-    // Update UI
+    resetState() {
+        this.ctx.globalAlpha = 1;
+        this.ctx.shadowBlur = 0;
+        this.ctx.font = this.baseFont;
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+    }
+}
+
+const renderer = new ASCIIRenderer(ctx);
+
+// ==================== Note Class ====================
+class Note {
+    constructor(noteData, index) {
+        this.data = noteData;
+        this.index = index;
+        this.creationTime = Date.now();
+        this.baseX = 0;
+        this.baseY = 0;
+        this.x = 0;
+        this.y = 0;
+        this.color = velocityToColor(noteData.velocity);
+        this.patternIdx = index % spherePatterns.length;
+
+        this.baseRadius = CONFIG.noteBaseRadius * (0.6 + (noteData.velocity / 127) * 0.6);
+        this.depth = Math.min(noteData.step / 10, 1);
+
+        this.calculatePosition();
+    }
+
+    calculatePosition() {
+        const padding = 100;
+        const usableWidth = canvas.width - padding * 2;
+        this.baseX = padding + (this.data.pitch / 127) * usableWidth;
+
+        const usableHeight = canvas.height - padding * 2;
+        const yProgress = (this.index % 20) / 20;
+        this.baseY = padding + yProgress * usableHeight + (this.data.duration * 30);
+
+        const pseudoRandom = Math.sin(this.data.pitch * 0.5 + this.index * 0.3) * 50;
+        this.baseY += pseudoRandom;
+
+        this.baseY = Math.max(padding, Math.min(canvas.height - padding, this.baseY));
+
+        const depthScale = 0.6 + (1 - this.depth) * 0.4;
+        this.baseRadius = CONFIG.noteBaseRadius * (0.5 + (this.data.velocity / 127) * 0.5) * depthScale;
+    }
+
+    update(time, orbitOffset, cameraOffset = { x: 0, y: 0 }) {
+        const parallaxX = orbitOffset.x * (0.3 + (1 - this.depth) * 0.7);
+        const parallaxY = orbitOffset.y * (0.3 + (1 - this.depth) * 0.7);
+
+        this.x = this.baseX + parallaxX + cameraOffset.x;
+        this.y = this.baseY + parallaxY + cameraOffset.y;
+
+        if (this.needsRecalc) {
+            this.calculatePosition();
+            this.needsRecalc = false;
+        }
+    }
+
+    getOpacity() {
+        const age = Date.now() - this.creationTime;
+        const fadeStart = CONFIG.noteFadeTime * 0.6;
+
+        if (age > fadeStart) {
+            return Math.max(0, 1 - (age - fadeStart) / (CONFIG.noteFadeTime - fadeStart));
+        }
+        return 1;
+    }
+
+    getPulsePhase(time) {
+        return time * CONFIG.notePulseSpeed + this.index;
+    }
+
+    render(renderer, time) {
+        const opacity = this.getOpacity();
+        if (opacity <= 0) return false;
+
+        renderer.drawSphere(this.x, this.y, this.baseRadius, this.color,
+            this.getPulsePhase(time), opacity, this.patternIdx);
+        return true;
+    }
+}
+
+// ==================== Trail Class ====================
+class Trail {
+    constructor(note1, note2) {
+        this.note1 = note1;
+        this.note2 = note2;
+        this.opacity = 0.8;
+    }
+
+    update(deltaTime) {
+        this.opacity -= CONFIG.trailFadeSpeed * (deltaTime / 1000);
+        return this.opacity > 0;
+    }
+
+    render(renderer) {
+        if (this.opacity <= 0) return;
+        const combinedOpacity = this.opacity * Math.min(this.note1.getOpacity(), this.note2.getOpacity());
+        renderer.drawTrail(this.note1.x, this.note1.y, this.note2.x, this.note2.y,
+            this.note1.color, combinedOpacity);
+    }
+}
+
+// ==================== Chord Line Class (for polyphony) ====================
+class ChordLine {
+    constructor(melodyNote, harmonyNote) {
+        this.melodyNote = melodyNote;
+        this.harmonyNote = harmonyNote;
+    }
+
+    render(ctx) {
+        const melodyOpacity = this.melodyNote.getOpacity();
+        const harmonyOpacity = this.harmonyNote.getOpacity();
+        const opacity = Math.min(melodyOpacity, harmonyOpacity) * 0.6;
+
+        if (opacity <= 0) return false;
+
+        // Draw glowing chord connection line
+        ctx.save();
+        ctx.globalAlpha = opacity;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.shadowColor = '#ffffff';
+        ctx.shadowBlur = 8;
+
+        ctx.beginPath();
+        ctx.moveTo(this.melodyNote.x, this.melodyNote.y);
+        ctx.lineTo(this.harmonyNote.x, this.harmonyNote.y);
+        ctx.stroke();
+
+        ctx.restore();
+        return true;
+    }
+}
+
+// ==================== Particle Class ====================
+class Particle {
+    constructor() {
+        this.reset();
+    }
+
+    reset() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.vx = (Math.random() - 0.5) * CONFIG.particleSpeedMax;
+        this.vy = (Math.random() - 0.5) * CONFIG.particleSpeedMax;
+        this.char = CONFIG.particleChars[Math.floor(Math.random() * CONFIG.particleChars.length)];
+        this.opacity = 0.2 + Math.random() * 0.4;
+        this.hue = Math.random() * 360;
+        this.twinkleSpeed = 0.001 + Math.random() * 0.002;
+        this.twinklePhase = Math.random() * Math.PI * 2;
+    }
+
+    update(time) {
+        this.x += this.vx;
+        this.y += this.vy;
+
+        if (this.x < 0) this.x = canvas.width;
+        else if (this.x > canvas.width) this.x = 0;
+        if (this.y < 0) this.y = canvas.height;
+        else if (this.y > canvas.height) this.y = 0;
+
+        this.currentOpacity = this.opacity * (0.5 + 0.5 * Math.sin(time * this.twinkleSpeed + this.twinklePhase));
+    }
+}
+
+// ==================== Particle System ====================
+class ParticleSystem {
+    constructor(count) {
+        this.particles = [];
+        for (let i = 0; i < count; i++) {
+            this.particles.push(new Particle());
+        }
+    }
+
+    setCount(count) {
+        while (this.particles.length < count) this.particles.push(new Particle());
+        while (this.particles.length > count) this.particles.pop();
+    }
+
+    update(time) {
+        for (const p of this.particles) p.update(time);
+    }
+
+    render(ctx, time) {
+        ctx.shadowBlur = 0;
+        ctx.font = `${CONFIG.fontSize}px ${CONFIG.fontFamily}`;
+
+        for (const p of this.particles) {
+            if (p.currentOpacity < 0.05) continue;
+            ctx.globalAlpha = p.currentOpacity;
+            ctx.fillStyle = `hsl(${p.hue}, 50%, 70%)`;
+            ctx.fillText(p.char, p.x, p.y);
+        }
+    }
+}
+
+const notes = [];
+const trails = [];
+const chordLines = [];  // For polyphony chord connections
+const particleSystem = new ParticleSystem(CONFIG.particleCount);
+let orbitOffset = { x: 0, y: 0 };
+
+// Camera tracking state
+let cameraOffset = { x: 0, y: 0 };
+let targetCameraOffset = { x: 0, y: 0 };
+
+// Shake state
+let shakeAmount = 0;
+let shakeOffset = { x: 0, y: 0 };
+let lastNotePitch = null;
+
+function addNote(noteData) {
+    const melodyNote = new Note(noteData, notes.length);
+
+    // Check for big pitch jump and trigger shake
+    if (CONFIG.shakeEnabled && lastNotePitch !== null) {
+        const pitchDiff = Math.abs(noteData.pitch - lastNotePitch);
+        if (pitchDiff >= CONFIG.shakePitchThreshold) {
+            shakeAmount = Math.min(pitchDiff / 127, 1) * CONFIG.shakeIntensity;
+        }
+    }
+    lastNotePitch = noteData.pitch;
+
+    if (notes.length > 0) {
+        trails.push(new Trail(notes[notes.length - 1], melodyNote));
+    }
+
+    notes.push(melodyNote);
+
+    // Handle polyphony - create harmony note if present
+    let harmonyNote = null;
+    if (noteData.harmony_pitch !== undefined && noteData.harmony_pitch !== null) {
+        const harmonyData = {
+            ...noteData,
+            pitch: noteData.harmony_pitch,
+            note_name: noteData.harmony_name || 'H',
+            velocity: noteData.velocity * 0.85  // Slightly quieter harmony
+        };
+        harmonyNote = new Note(harmonyData, notes.length);
+        notes.push(harmonyNote);
+
+        // Create chord connection line
+        chordLines.push(new ChordLine(melodyNote, harmonyNote));
+    }
+
+    const maxLength = parseInt(document.getElementById('trail-length').value);
+    while (notes.length > maxLength) notes.shift();
+    while (trails.length > maxLength) trails.shift();
+    while (chordLines.length > maxLength / 2) chordLines.shift();
+
     document.getElementById('note-count').textContent = notes.length;
+
+    // Show harmony info if present
+    const harmonyInfo = harmonyNote ? ` + <span>${noteData.harmony_name}</span>` : '';
     document.getElementById('latest-note').innerHTML = `
-        <span>${noteData.note_name}</span> |
-        Pitch: ${noteData.pitch} |
+        <span>${noteData.note_name}</span>${harmonyInfo} |
+        Pitch: ${noteData.pitch}${harmonyNote ? '+' + noteData.harmony_pitch : ''} |
         Duration: ${noteData.duration.toFixed(3)}s<br>
         Velocity: ${noteData.velocity} |
         Step: ${noteData.step.toFixed(3)}s
@@ -191,13 +482,9 @@ function addNote(noteData) {
 }
 
 function clearVisualization() {
-    while (notes.length > 0) {
-        const note = notes.shift();
-        noteGroup.remove(note.mesh);
-        if (note.line) {
-            noteGroup.remove(note.line);
-        }
-    }
+    notes.length = 0;
+    trails.length = 0;
+    chordLines.length = 0;
     document.getElementById('note-count').textContent = '0';
 }
 
@@ -222,28 +509,19 @@ function connectWebSocket() {
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                if (data.type === 'note') {
-                    addNote(data);
-                }
+                if (data.type === 'note') addNote(data);
             } catch (e) {
                 console.error('Error parsing message:', e);
             }
         };
 
-        ws.onerror = (error) => {
-            console.error('WebSocket error:', error);
-        };
+        ws.onerror = (error) => console.error('WebSocket error:', error);
 
         ws.onclose = () => {
             console.log('WebSocket disconnected');
             document.getElementById('status-indicator').className = 'status-indicator disconnected';
             document.getElementById('status-text').textContent = 'Disconnected - Reconnecting...';
-
-            // Attempt to reconnect
-            reconnectTimeout = setTimeout(() => {
-                console.log('Attempting to reconnect...');
-                connectWebSocket();
-            }, CONFIG.reconnectInterval);
+            reconnectTimeout = setTimeout(connectWebSocket, CONFIG.reconnectInterval);
         };
     } catch (e) {
         console.error('Failed to create WebSocket:', e);
@@ -264,7 +542,6 @@ function animate() {
     const deltaTime = currentTime - lastTime;
     lastTime = currentTime;
 
-    // Update FPS counter
     frames++;
     if (currentTime - fpsUpdateTime > 1000) {
         document.getElementById('fps').textContent = frames;
@@ -272,105 +549,111 @@ function animate() {
         fpsUpdateTime = currentTime;
     }
 
-    // Rotate scene
-    const rotationSpeed = parseFloat(document.getElementById('rotation-speed').value) / 10000;
-    noteGroup.rotation.y += rotationSpeed;
+    if (CONFIG.orbitEnabled) {
+        const rotationSpeed = parseFloat(document.getElementById('rotation-speed').value) / 100;
+        const orbitPhase = currentTime * CONFIG.orbitSpeed * rotationSpeed;
 
-    // Orbital camera movement around the note space
-    const cameraDistance = 50;
-    const cameraSpeed = currentTime * 0.0001;
-    const orbitCenterZ = -30;  // Orbit around where notes appear
-    camera.position.x = Math.sin(cameraSpeed) * cameraDistance;
-    camera.position.z = orbitCenterZ + Math.cos(cameraSpeed) * cameraDistance;
-    camera.position.y = 25 + Math.sin(cameraSpeed * 0.5) * 10;
-    camera.lookAt(0, 15, orbitCenterZ);  // Always look at note space center
-
-    // Animate notes (pulsing and fading)
-    notes.forEach((note, index) => {
-        const age = currentTime - note.creationTime;
-        const maxAge = 30000; // 30 seconds
-
-        // Pulsing effect - more dramatic for newer notes
-        const pulseSpeed = 0.003;
-        const pulseAmount = Math.max(0, 1 - age / 10000) * 0.3; // Fade pulse over time
-        const pulse = 1 + Math.sin(currentTime * pulseSpeed + index) * pulseAmount;
-        note.mesh.scale.set(pulse, pulse, pulse);
-
-        // Fade out old notes
-        const fadeStart = maxAge * 0.6;
-        if (age > fadeStart) {
-            const fadeProgress = (age - fadeStart) / (maxAge - fadeStart);
-            const opacity = 1 - fadeProgress;
-
-            // Fade sphere material
-            note.mesh.material.opacity = opacity;
-            note.mesh.material.transparent = true;
-
-            // Fade glows
-            if (note.glow) note.glow.material.opacity = 0.5 * opacity;
-            if (note.outerGlow) note.outerGlow.material.opacity = 0.15 * opacity;
-        }
-
-        // Fade out connecting lines gradually
-        if (note.line && note.lineOpacity !== undefined) {
-            const lineFadeSpeed = 0.015;
-            note.lineOpacity = Math.max(0, note.lineOpacity - lineFadeSpeed * deltaTime / 1000);
-            note.line.material.opacity = note.lineOpacity;
-        }
-
-        // Gentle rotation of each sphere
-        note.mesh.rotation.y += 0.01;
-        note.mesh.rotation.x += 0.005;
-    });
-
-    // Animate particles - more dramatic movement
-    const positions = particleSystem.geometry.attributes.position.array;
-    for (let i = 0; i < particleCount; i++) {
-        positions[i * 3] += particleVelocities[i].x;
-        positions[i * 3 + 1] += particleVelocities[i].y;
-        positions[i * 3 + 2] += particleVelocities[i].z;
-
-        // Boundary check - wrap around
-        if (Math.abs(positions[i * 3]) > 50) particleVelocities[i].x *= -1;
-        if (Math.abs(positions[i * 3 + 1]) > 50) particleVelocities[i].y *= -1;
-        if (Math.abs(positions[i * 3 + 2]) > 50) particleVelocities[i].z *= -1;
+        orbitOffset.x = Math.sin(orbitPhase) * CONFIG.orbitAmplitude
+            + Math.sin(orbitPhase * 1.5) * CONFIG.orbitAmplitude * 0.3;
+        orbitOffset.y = Math.cos(orbitPhase * 0.7) * CONFIG.orbitYAmplitude
+            + Math.sin(orbitPhase * 0.4) * CONFIG.orbitYAmplitude * 0.2;
     }
-    particleSystem.geometry.attributes.position.needsUpdate = true;
 
-    // Rotate particle system
-    particleSystem.rotation.y += 0.0003;
-    particleSystem.rotation.x += 0.0005;
+    // Note-tracking camera
+    if (CONFIG.trackingEnabled && notes.length > 0) {
+        // Calculate average position of recent notes
+        const recentCount = Math.min(CONFIG.trackingRecentNotes, notes.length);
+        let avgX = 0, avgY = 0;
+        for (let i = notes.length - recentCount; i < notes.length; i++) {
+            avgX += notes[i].baseX;
+            avgY += notes[i].baseY;
+        }
+        avgX /= recentCount;
+        avgY /= recentCount;
 
-    // DRAMATIC: More intense pulsing lights
-    pointLight1.intensity = 3 + Math.sin(currentTime * 0.002) * 1.5;
-    pointLight2.intensity = 2.5 + Math.cos(currentTime * 0.0025) * 1.5;
+        // Calculate offset to center the notes
+        const screenCenterX = canvas.width * CONFIG.trackingCenterX;
+        const screenCenterY = canvas.height * CONFIG.trackingCenterY;
+        targetCameraOffset.x = (screenCenterX - avgX) * CONFIG.trackingStrength;
+        targetCameraOffset.y = (screenCenterY - avgY) * CONFIG.trackingStrength;
 
-    // Move lights around
-    pointLight1.position.x = Math.sin(currentTime * 0.0005) * 30;
-    pointLight1.position.z = Math.cos(currentTime * 0.0005) * 30;
+        // Smooth interpolation
+        cameraOffset.x += (targetCameraOffset.x - cameraOffset.x) * CONFIG.trackingSmoothing;
+        cameraOffset.y += (targetCameraOffset.y - cameraOffset.y) * CONFIG.trackingSmoothing;
+    }
 
-    renderer.render(scene, camera);
+    // Update shake (decay over time)
+    if (shakeAmount > 0.1) {
+        shakeOffset.x = (Math.random() - 0.5) * shakeAmount * 2;
+        shakeOffset.y = (Math.random() - 0.5) * shakeAmount * 2;
+        shakeAmount *= CONFIG.shakeDecay;
+    } else {
+        shakeOffset.x = 0;
+        shakeOffset.y = 0;
+        shakeAmount = 0;
+    }
+
+    renderer.clear();
+    renderer.resetState();
+
+    // Apply zoom transform
+    ctx.save();
+    const zoomCenterX = canvas.width / 2;
+    const zoomCenterY = canvas.height / 2;
+    ctx.translate(zoomCenterX + shakeOffset.x, zoomCenterY + shakeOffset.y);
+    ctx.scale(CONFIG.zoomLevel, CONFIG.zoomLevel);
+    ctx.translate(-zoomCenterX, -zoomCenterY);
+
+    particleSystem.update(currentTime);
+    particleSystem.render(ctx, currentTime);
+
+    for (const note of notes) {
+        note.update(currentTime, orbitOffset, cameraOffset);
+    }
+
+    for (let i = trails.length - 1; i >= 0; i--) {
+        if (!trails[i].update(deltaTime)) {
+            trails.splice(i, 1);
+        } else {
+            trails[i].render(renderer);
+        }
+    }
+
+    // Render chord lines (polyphony connections)
+    for (let i = chordLines.length - 1; i >= 0; i--) {
+        if (!chordLines[i].render(ctx)) {
+            chordLines.splice(i, 1);
+        }
+    }
+
+    for (let i = notes.length - 1; i >= 0; i--) {
+        if (!notes[i].render(renderer, currentTime)) {
+            notes.splice(i, 1);
+        }
+    }
+
+    // Restore context after zoom transform
+    ctx.restore();
 }
 
 // ==================== Controls ====================
 document.getElementById('particle-density').addEventListener('input', (e) => {
     const newCount = parseInt(e.target.value);
+    particleSystem.setCount(newCount);
     document.getElementById('particle-count').textContent = newCount;
 });
 
 document.getElementById('clear-btn').addEventListener('click', clearVisualization);
 
-// ==================== Responsive Canvas ====================
 window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    resizeCanvas();
+    for (const note of notes) note.needsRecalc = true;
 });
 
 // ==================== Initialize ====================
-document.getElementById('particle-count').textContent = particleCount;
+document.getElementById('particle-count').textContent = CONFIG.particleCount;
 connectWebSocket();
 animate();
 
-console.log('Music Visualization initialized');
+console.log('ASCII Music Visualization initialized');
 console.log('Waiting for MIDI data from realtime_midi_generator.py...');

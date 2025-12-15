@@ -60,8 +60,17 @@ class GestureMIDIController:
         self.last_cc_values = {}
         self.midi_lock = threading.Lock()
 
+        # Left hand position buffers (for MIDI effects)
         self.position_buffer_x = deque(maxlen=5)
         self.position_buffer_y = deque(maxlen=5)
+        
+        # Right hand position buffers (for tempo control)
+        self.right_hand_buffer_y = deque(maxlen=8)  # More smoothing for tempo
+        
+        # Speed control state
+        self.current_speed = 1.0
+        self.min_speed = 0.25  # 4x slower at bottom
+        self.max_speed = 4.0   # 4x faster at top
 
     def normalize_to_midi(self, value, min_val=0.0, max_val=1.0):
         """Normalize a value to MIDI range (0-127)."""
@@ -117,6 +126,32 @@ class GestureMIDIController:
         elif gesture == "Rock On":
             self.send_cc(self.CC_MODULATION, 127)
 
+    def process_right_hand_data(self, hand_landmarks):
+        """
+        Process right hand tracking data for tempo/speed control.
+        
+        Hand position Y controls speed:
+        - Top (y=0.0) = 4x faster
+        - Middle (y=0.5) = normal speed
+        - Bottom (y=1.0) = 0.25x (4x slower)
+        """
+        index_tip = hand_landmarks[8]
+        
+        # Smooth the Y position
+        self.right_hand_buffer_y.append(index_tip.y)
+        y_pos = sum(self.right_hand_buffer_y) / len(self.right_hand_buffer_y)
+        
+        # Clamp Y to 0-1 range
+        y_pos = max(0.0, min(1.0, y_pos))
+        
+        # Exponential mapping for symmetric feel:
+        # y=0 -> speed=4.0, y=0.5 -> speed=1.0, y=1.0 -> speed=0.25
+        # Formula: speed = max_speed * (min_speed/max_speed)^y
+        # = 4.0 * (0.25/4.0)^y = 4.0 * (0.0625)^y
+        self.current_speed = self.max_speed * pow(self.min_speed / self.max_speed, y_pos)
+        
+        return self.current_speed
+
 
 class IntegratedMusicGestureSystem:
     """Integrates MIDI generation with gesture control."""
@@ -165,8 +200,9 @@ class IntegratedMusicGestureSystem:
 
         if self.enable_gesture:
             self.gesture_controller = GestureMIDIController(self.midi_out)
-            self.hand_tracker = HandTracker(max_hands=1)
-            print("✓ Gesture control initialized\n")
+            self.hand_tracker = HandTracker(max_hands=2)  # Enable both hands
+            print("✓ Gesture control initialized (2-hand tracking)")
+            print("  Left hand: MIDI effects | Right hand: Tempo control\n")
 
         # Polyphony setup
         self.enable_polyphony = enable_polyphony
@@ -318,15 +354,22 @@ class IntegratedMusicGestureSystem:
                         results.multi_handedness
                     ):
                         hand_label = handedness.classification[0].label
-                        gesture = self.hand_tracker.recognize_gesture(
-                            hand_landmarks.landmark, hand_label
-                        )
-
-                        self.gesture_controller.process_hand_data(
-                            hand_landmarks.landmark,
-                            hand_label,
-                            gesture
-                        )
+                        
+                        if hand_label == "Left":
+                            # Left hand controls MIDI effects
+                            gesture = self.hand_tracker.recognize_gesture(
+                                hand_landmarks.landmark, hand_label
+                            )
+                            self.gesture_controller.process_hand_data(
+                                hand_landmarks.landmark,
+                                hand_label,
+                                gesture
+                            )
+                        elif hand_label == "Right":
+                            # Right hand controls tempo/speed
+                            speed = self.gesture_controller.process_right_hand_data(
+                                hand_landmarks.landmark
+                            )
 
                 last_update = current_time
 
@@ -405,21 +448,31 @@ class IntegratedMusicGestureSystem:
         """Generate and play music with gesture control."""
         self.start_websocket_server()
         self.start_gesture_control()
+        
+        # Store base speed for fallback when no gesture
+        self.base_speed = speed
 
         print("\n" + "=" * 70)
         print(f"🎵 INTEGRATED MUSIC GENERATION WITH GESTURE CONTROL")
         print("=" * 70)
-        print(f"Temperature: {temperature} | Velocity: {velocity} | Speed: {speed}x")
+        print(f"Temperature: {temperature} | Velocity: {velocity} | Base Speed: {speed}x")
         if self.enable_polyphony:
             print(f"Polyphony: 2-VOICE ENABLED")
         if self.enable_gesture:
-            print("Gesture Control: ACTIVE - Move hands to control effects!")
+            print("Gesture Control: ACTIVE")
+            print("  → Left hand: MIDI effects | Right hand: Tempo (up=fast, down=slow)")
         print("Press Ctrl+C to stop")
         print("=" * 70 + "\n")
 
         count = 0
         try:
             while num_notes is None or count < num_notes:
+                # Get effective speed (gesture-controlled or base)
+                if self.enable_gesture and self.gesture_controller:
+                    effective_speed = self.gesture_controller.current_speed
+                else:
+                    effective_speed = self.base_speed
+                
                 if self.enable_polyphony:
                     # POLYPHONIC MODE: Generate melody + harmony
                     melody_note, harmony_note = self.polyphony_system.predict_next_notes(temperature)
@@ -430,10 +483,10 @@ class IntegratedMusicGestureSystem:
                     duration = max(min_duration, min(max_duration, duration))
                     harmony_duration = max(min_duration, min(max_duration, harmony_duration))
 
-                    # Apply speed multiplier
-                    duration_adjusted = duration * speed
-                    step_adjusted = step * speed
-                    harmony_duration_adjusted = harmony_duration * speed
+                    # Apply speed multiplier (gesture-controlled or base)
+                    duration_adjusted = duration * effective_speed
+                    step_adjusted = step * effective_speed
+                    harmony_duration_adjusted = harmony_duration * effective_speed
 
                     # Display
                     note_name = self._pitch_to_name(pitch)
@@ -473,9 +526,9 @@ class IntegratedMusicGestureSystem:
                     pitch, step, duration = self.predict_next_note(temperature)
                     duration = max(min_duration, min(max_duration, duration))
 
-                    # Apply speed multiplier
-                    duration_adjusted = duration * speed
-                    step_adjusted = step * speed
+                    # Apply speed multiplier (gesture-controlled or base)
+                    duration_adjusted = duration * effective_speed
+                    step_adjusted = step * effective_speed
 
                     # Display
                     note_name = self._pitch_to_name(pitch)
