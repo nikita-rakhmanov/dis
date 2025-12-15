@@ -67,15 +67,6 @@ const CONFIG = {
     shakeIntensity: 15,          // Max shake amount in pixels
     shakeDecay: 0.85,            // How fast shake fades (0.8 = fast, 0.95 = slow)
 
-    // ==================== NEW: Starfield Background ====================
-    // DISABLED: User preferred original background
-    starfieldEnabled: false,
-    starfieldLayers: [
-        { count: 100, speed: 0.1, size: 1, opacity: 0.3 },   // Distant stars
-        { count: 60, speed: 0.3, size: 1.5, opacity: 0.5 },  // Mid stars
-        { count: 30, speed: 0.6, size: 2, opacity: 0.8 }     // Close stars
-    ],
-    starfieldReactivity: 0.3,    // How much stars react to music (0-1)
 
     // Synthwave grid - TRON style blue
     synthwaveGridEnabled: true,
