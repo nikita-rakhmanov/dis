@@ -112,11 +112,12 @@ If auto-detection doesn't work:
    - Channel: Select the MIDI channel (usually 1)
    - Control Type: CC
    - CC Number: Enter manually:
-     - **74** for Filter Cutoff
-     - **71** for Resonance
-     - **91** for Reverb
+     - **74** for Filter Cutoff (Left Hand X)
+     - **71** for Resonance (Left Hand Pinch)
+     - **91** for Reverb (Left Hand Y)
      - **93** for Chorus
      - **1** for Modulation
+     - **14** for Arpeggiator Rate (Right Hand Y)
 
 4. **Set Min/Max range** (optional):
    - Min: 0
@@ -135,7 +136,7 @@ Add these effects to **Track 3** (Audio Output) in this order:
 ├─────────────────────────────────────────────────────┤
 │                                                     │
 │  1. Auto Filter                                     │
-│     ├─ Frequency  → Map to CC 74 (Hand X)          │
+│     ├─ Frequency  → Map to CC 74 (Left Hand X)     │
 │     └─ Resonance  → Map to CC 71 (Pinch)           │
 │                                                     │
 │  2. Redux or Erosion (optional)                     │
@@ -145,9 +146,21 @@ Add these effects to **Track 3** (Audio Output) in this order:
 │     └─ Dry/Wet    → Map to CC 93 (Open Palm/Fist)  │
 │                                                     │
 │  4. Reverb                                          │
-│     └─ Dry/Wet    → Map to CC 91 (Hand Y)          │
+│     └─ Dry/Wet    → Map to CC 91 (Left Hand Y)     │
 │                                                     │
 │  5. Utility (for volume control)                    │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────┐
+│  MIDI Track 1: "Generator Notes" (with Arpeggiator) │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│  MIDI Effect: Arpeggiator                           │
+│     └─ Rate      → Map to CC 14 (Right Hand Y)     │
+│                    (up=fast, down=slow)            │
+│                                                     │
+│  Instrument: Your synth                             │
 │                                                     │
 └─────────────────────────────────────────────────────┘
 ```
@@ -188,6 +201,24 @@ Add these effects to **Track 3** (Audio Output) in this order:
      - Min: 0%
      - Max: 50-70%
 4. **Rate:** Set to 0.5-1.0 Hz
+
+#### Arpeggiator Setup (for Right Hand Control)
+
+1. **Add Arpeggiator** as a MIDI Effect on Track 1 (before the instrument)
+2. **Style:** Choose "Up", "Down", or "Up/Down"
+3. **Map:**
+   - **Rate** → CC 14 (Right Hand Y Position)
+     - Move hand UP = faster arpeggio
+     - Move hand DOWN = slower arpeggio
+4. **Setup in MIDI Mapping Mode:**
+   - Press **Cmd+M** (Mac) / **Ctrl+M** (Windows)
+   - Click on the **Rate** parameter in the Arpeggiator
+   - Move your right hand up and down
+   - Ableton will auto-detect CC 14
+5. **Leave other Arpeggiator settings as desired:**
+   - Steps: 8-16
+   - Gate: 50-100%
+   - Transpose: as desired
 
 ### Part 6: Alternative Setup (Using Audio Effect Rack)
 

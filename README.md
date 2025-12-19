@@ -153,15 +153,23 @@ python test_gesture_midi.py
 
 The gesture control system sends the following MIDI CC messages:
 
+### Left Hand (MIDI Effects)
 | Gesture/Movement | CC# | Parameter | Value Range |
 |------------------|-----|-----------|-------------|
-| Hand X Position | 74 | Filter Cutoff | 0-127 |
+| Hand X Position (center peak) | 74 | Filter Cutoff | 0-127 |
 | Hand Y Position | 91 | Reverb/Delay | 0-127 |
 | Thumb-Index Distance | 71 | Resonance | 0-127 |
 | Open Palm | 93 | Chorus | 127 |
 | Closed Fist | 93, 1 | Chorus, Mod | 0 |
 | Peace Sign | 1 | Modulation | 64 |
 | Rock On | 1 | Modulation | 127 |
+
+### Right Hand (Tempo + Arpeggiator)
+| Gesture/Movement | CC# | Parameter | Value Range |
+|------------------|-----|-----------|-------------|
+| Hand Y Position (up) | 14 | Arpeggiator Rate | 127 (fastest) |
+| Hand Y Position (middle) | 14 | Arpeggiator Rate | 64 |
+| Hand Y Position (down) | 14 | Arpeggiator Rate | 0 (slowest) |
 
 ## Command Line Options
 
@@ -271,11 +279,16 @@ Edit `integrated_music_gesture_control.py`:
 
 ```python
 class GestureMIDIController:
-    CC_FILTER_CUTOFF = 74  # Change to your desired CC number
-    CC_RESONANCE = 71
-    CC_REVERB = 91
-    CC_CHORUS = 93
-    CC_MODULATION = 1
+    # Left hand effects (MIDI CC)
+    CC_FILTER_CUTOFF = 74  # Hand X position (center peak)
+    CC_RESONANCE = 71      # Thumb-index pinch distance
+    CC_REVERB = 91         # Hand Y position
+    CC_CHORUS = 93         # Open Palm/Closed Fist
+    CC_MODULATION = 1      # Gestures (Peace, Rock On)
+    CC_EXPRESSION = 11
+    
+    # Right hand control
+    CC_ARPEGGIATOR_RATE = 14  # Hand Y position (up=fast, down=slow)
 ```
 
 ### Adjust Smoothing

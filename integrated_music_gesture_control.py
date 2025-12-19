@@ -46,6 +46,7 @@ class GestureMIDIController:
     CC_CHORUS = 93
     CC_MODULATION = 1
     CC_EXPRESSION = 11
+    CC_ARPEGGIATOR_RATE = 14  # For controlling Ableton arpeggiator rate
 
     def __init__(self, midi_out, update_rate=20):
         """
@@ -69,8 +70,8 @@ class GestureMIDIController:
         
         # Speed control state
         self.current_speed = 1.0
-        self.min_speed = 0.25  # 4x slower at bottom
-        self.max_speed = 4.0   # 4x faster at top
+        self.min_speed = 0.125  # 8x slower at bottom
+        self.max_speed = 8.0    # 8x faster at top
 
     def normalize_to_midi(self, value, min_val=0.0, max_val=1.0):
         """Normalize a value to MIDI range (0-127)."""
@@ -105,7 +106,11 @@ class GestureMIDIController:
         x_pos = self.smooth_value(self.position_buffer_x, index_tip.x)
         y_pos = self.smooth_value(self.position_buffer_y, index_tip.y)
 
-        cutoff_value = self.normalize_to_midi(x_pos, 0.0, 1.0)
+        # Map filter cutoff to peak at center (x=0.5), minimum at edges
+        # Distance from center: 0 at center, 0.5 at edges
+        # Filter value: 1.0 at center, 0.0 at edges
+        center_proximity = 1.0 - abs(0.5 - x_pos) * 2.0
+        cutoff_value = self.normalize_to_midi(center_proximity, 0.0, 1.0)
         self.send_cc(self.CC_FILTER_CUTOFF, cutoff_value)
 
         reverb_value = self.normalize_to_midi(1.0 - y_pos, 0.0, 1.0)
@@ -128,12 +133,12 @@ class GestureMIDIController:
 
     def process_right_hand_data(self, hand_landmarks):
         """
-        Process right hand tracking data for tempo/speed control.
+        Process right hand tracking data for tempo/speed control and arpeggiator rate.
         
-        Hand position Y controls speed:
-        - Top (y=0.0) = 4x faster
-        - Middle (y=0.5) = normal speed
-        - Bottom (y=1.0) = 0.25x (4x slower)
+        Hand position Y controls speed and arpeggiator rate:
+        - Top (y=0.0) = 4x faster, arpeggiator rate CC = 127 (fastest)
+        - Middle (y=0.5) = normal speed, arpeggiator rate CC = 64
+        - Bottom (y=1.0) = 0.25x (4x slower), arpeggiator rate CC = 0 (slowest)
         """
         index_tip = hand_landmarks[8]
         
@@ -150,6 +155,11 @@ class GestureMIDIController:
         # = 4.0 * (0.25/4.0)^y = 4.0 * (0.0625)^y
         self.current_speed = self.max_speed * pow(self.min_speed / self.max_speed, y_pos)
         
+        # Send arpeggiator rate CC: hand up = 127 (fast), hand down = 0 (slow)
+        # Inverted from y_pos since y=0 is top of frame (hand up)
+        arp_rate_value = self.normalize_to_midi(1.0 - y_pos, 0.0, 1.0)
+        self.send_cc(self.CC_ARPEGGIATOR_RATE, arp_rate_value)
+        
         return self.current_speed
 
 
@@ -164,7 +174,7 @@ class IntegratedMusicGestureSystem:
 
         Args:
             model_path: Path to trained RNN model
-            midi_port_name: MIDI port name (interactive if None)
+            midi_port_name: MIDI output port name (interactive if None)
             enable_websocket: Enable WebSocket visualization
             ws_port: WebSocket port number
             enable_gesture: Enable gesture control
@@ -203,6 +213,11 @@ class IntegratedMusicGestureSystem:
             self.hand_tracker = HandTracker(max_hands=2)  # Enable both hands
             print("✓ Gesture control initialized (2-hand tracking)")
             print("  Left hand: MIDI effects | Right hand: Tempo control\n")
+
+        # Start gesture detection state
+        self.start_gesture_completed = False
+        self.start_gesture_hold_start = None
+        self.start_gesture_hold_time = 1.5  # seconds to hold peace signs
 
         # Polyphony setup
         self.enable_polyphony = enable_polyphony
@@ -291,6 +306,28 @@ class IntegratedMusicGestureSystem:
                 return_exceptions=True
             )
 
+    def broadcast_hand_data(self, left_hand=None, right_hand=None):
+        """Broadcast hand tracking data to WebSocket clients for visualization."""
+        if not self.ws_clients or not self.ws_loop:
+            return
+        
+        hand_data = {
+            'type': 'hand_data',
+            'left_hand': left_hand,
+            'right_hand': right_hand,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        message = json.dumps(hand_data)
+        for client in list(self.ws_clients):
+            try:
+                asyncio.run_coroutine_threadsafe(
+                    client.send(message),
+                    self.ws_loop
+                )
+            except Exception:
+                pass
+
     def start_websocket_server(self):
         """Start WebSocket server in background thread."""
         if not self.enable_websocket:
@@ -348,12 +385,18 @@ class IntegratedMusicGestureSystem:
 
             current_time = time.time()
             if current_time - last_update >= frame_interval:
+                # Track hand data for visualization
+                left_hand_data = None
+                right_hand_data = None
+                
                 if results.multi_hand_landmarks:
                     for hand_landmarks, handedness in zip(
                         results.multi_hand_landmarks,
                         results.multi_handedness
                     ):
                         hand_label = handedness.classification[0].label
+                        # Get index finger tip position (landmark 8)
+                        index_tip = hand_landmarks.landmark[8]
                         
                         if hand_label == "Left":
                             # Left hand controls MIDI effects
@@ -365,12 +408,55 @@ class IntegratedMusicGestureSystem:
                                 hand_label,
                                 gesture
                             )
+                            # Collect for visualization
+                            left_hand_data = {
+                                'x': index_tip.x,
+                                'y': index_tip.y,
+                                'visible': True,
+                                'filter_cutoff': self.gesture_controller.last_cc_values.get(74, 64),
+                                'reverb': self.gesture_controller.last_cc_values.get(91, 64),
+                                'gesture': gesture
+                            }
                         elif hand_label == "Right":
                             # Right hand controls tempo/speed
                             speed = self.gesture_controller.process_right_hand_data(
                                 hand_landmarks.landmark
                             )
+                            # Get gesture for right hand too
+                            right_gesture = self.hand_tracker.recognize_gesture(
+                                hand_landmarks.landmark, hand_label
+                            )
+                            # Collect for visualization
+                            right_hand_data = {
+                                'x': index_tip.x,
+                                'y': index_tip.y,
+                                'visible': True,
+                                'tempo_speed': round(speed, 2),
+                                'gesture': right_gesture
+                            }
 
+                # Check for start gesture (both hands peace sign in center)
+                if not self.start_gesture_completed:
+                    left_ready = (left_hand_data and 
+                                  left_hand_data.get('gesture') == 'Peace Sign' and
+                                  0.25 <= left_hand_data.get('x', 0) <= 0.75)
+                    right_ready = (right_hand_data and 
+                                   right_hand_data.get('gesture') == 'Peace Sign' and
+                                   0.25 <= right_hand_data.get('x', 0) <= 0.75)
+                    
+                    if left_ready and right_ready:
+                        if self.start_gesture_hold_start is None:
+                            self.start_gesture_hold_start = time.time()
+                        elif time.time() - self.start_gesture_hold_start >= self.start_gesture_hold_time:
+                            self.start_gesture_completed = True
+                            print("\n✓ Start gesture detected! Music generation starting...\n")
+                    else:
+                        self.start_gesture_hold_start = None
+
+                # Broadcast hand data to visualization
+                if self.enable_websocket and (left_hand_data or right_hand_data):
+                    self.broadcast_hand_data(left_hand_data, right_hand_data)
+                    
                 last_update = current_time
 
         cap.release()
@@ -458,11 +544,17 @@ class IntegratedMusicGestureSystem:
         print(f"Temperature: {temperature} | Velocity: {velocity} | Base Speed: {speed}x")
         if self.enable_polyphony:
             print(f"Polyphony: 2-VOICE ENABLED")
+        print("Gesture Control: ACTIVE")
+        print("  → Left hand: MIDI effects | Right hand: Tempo + Arp Rate CC14 (up=fast, down=slow)")
         if self.enable_gesture:
-            print("Gesture Control: ACTIVE")
-            print("  → Left hand: MIDI effects | Right hand: Tempo (up=fast, down=slow)")
+            print("\n✋ Waiting for START GESTURE: Both hands Peace Sign ✌️ in center area...")
         print("Press Ctrl+C to stop")
         print("=" * 70 + "\n")
+
+        # Wait for start gesture before generating music
+        if self.enable_gesture:
+            while not self.start_gesture_completed and self.gesture_running:
+                time.sleep(0.1)
 
         count = 0
         try:
@@ -483,17 +575,29 @@ class IntegratedMusicGestureSystem:
                     duration = max(min_duration, min(max_duration, duration))
                     harmony_duration = max(min_duration, min(max_duration, harmony_duration))
 
-                    # Apply speed multiplier (gesture-controlled or base)
-                    duration_adjusted = duration * effective_speed
-                    step_adjusted = step * effective_speed
-                    harmony_duration_adjusted = harmony_duration * effective_speed
+                    # Apply BASE speed multiplier first (from --speed argument)
+                    # Then gesture control adjusts within this base
+                    base_multiplier = speed  # This is the --speed argument
+                    step_base = step * base_multiplier
+                    duration_base = duration * base_multiplier
+                    harmony_duration_base = harmony_duration * base_multiplier
+                    
+                    # Apply gesture-controlled speed on top of base
+                    # effective_speed: hand up (y=0) = 4x, middle = 1x, down = 0.25x
+                    # We DIVIDE by speed so: hand up = faster (shorter notes), hand down = slower (longer notes)
+                    # Base of 4s / effective_speed: 4s/4 = 1s (hand up), 4s/1 = 4s (middle), 4s/0.25 = 16s (hand down)
+                    base_duration = 4.0  # 4 second baseline
+                    duration_adjusted = base_duration / effective_speed
+                    step_adjusted = step_base / effective_speed  # Step also scales with speed
+                    harmony_duration_adjusted = base_duration / effective_speed
 
                     # Display
                     note_name = self._pitch_to_name(pitch)
                     harmony_name = self._pitch_to_name(harmony_pitch)
-                    print(f"♪ {count+1:4d}: {note_name:4s}+{harmony_name:4s} "
+                    print(f"Note {count+1:4d}: {note_name:4s}+{harmony_name:4s} "
                           f"(melody={pitch:3d}, harmony={harmony_pitch:3d}) "
-                          f"step={step_adjusted:5.3f}s dur={duration_adjusted:5.3f}s")
+                          f"step={step_adjusted:5.3f}s dur={duration_adjusted:5.3f}s "
+                          f"speed={effective_speed:.2f}x")
 
                     # Broadcast to visualization (melody)
                     note_data = {
@@ -526,14 +630,22 @@ class IntegratedMusicGestureSystem:
                     pitch, step, duration = self.predict_next_note(temperature)
                     duration = max(min_duration, min(max_duration, duration))
 
-                    # Apply speed multiplier (gesture-controlled or base)
-                    duration_adjusted = duration * effective_speed
-                    step_adjusted = step * effective_speed
+                    # Apply BASE speed multiplier first (from --speed argument)
+                    base_multiplier = speed
+                    step_base = step * base_multiplier
+                    duration_base = duration * base_multiplier
+                    
+                    # Apply gesture-controlled speed on top of base
+                    # hand up = faster (shorter notes), hand down = slower (longer notes)
+                    base_duration = 4.0  # 4 second baseline
+                    duration_adjusted = base_duration / effective_speed
+                    step_adjusted = step_base / effective_speed
 
                     # Display
                     note_name = self._pitch_to_name(pitch)
-                    print(f"♪ {count+1:4d}: {note_name:4s} (pitch={pitch:3d}) "
-                          f"step={step_adjusted:5.3f}s dur={duration_adjusted:5.3f}s")
+                    print(f"Note {count+1:4d}: {note_name:4s} (pitch={pitch:3d}) "
+                          f"step={step_adjusted:5.3f}s dur={duration_adjusted:5.3f}s "
+                          f"speed={effective_speed:.2f}x")
 
                     # Broadcast to visualization
                     note_data = {
@@ -566,7 +678,7 @@ class IntegratedMusicGestureSystem:
             for note in range(128):
                 self.midi_out.send(Message('note_off', note=note, velocity=0))
 
-            for cc in [1, 11, 71, 74, 91, 93]:
+            for cc in [1, 11, 14, 71, 74, 91, 93]:
                 self.midi_out.send(Message('control_change', control=cc, value=0))
 
             self.midi_out.close()
@@ -606,8 +718,8 @@ def main():
                        help='Disable gesture control')
     parser.add_argument('--ws-port', type=int, default=8765,
                        help='WebSocket port')
-    parser.add_argument('--speed', type=float, default=1.0,
-                       help='Playback speed multiplier (higher = slower, e.g., 2.0 = half speed)')
+    parser.add_argument('--speed', type=float, default=4.0,
+                       help='Playback speed multiplier (higher = slower, default: 4.0)')
     parser.add_argument('--polyphony', action='store_true',
                        help='Enable 2-voice polyphony (melody + harmony)')
     parser.add_argument('--harmony-style', default='classical',

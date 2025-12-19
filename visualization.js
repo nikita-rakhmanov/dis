@@ -68,13 +68,15 @@ const CONFIG = {
     shakeDecay: 0.85,            // How fast shake fades (0.8 = fast, 0.95 = slow)
 
 
-    // Synthwave grid - TRON style blue
+    // Synthwave grid - TRON style with color cycling
     synthwaveGridEnabled: true,
     synthwaveGridLines: 20,
     synthwaveGridSpeed: 0.5,
-    synthwaveGridColor: '#00d4ff',      // Tron blue (was magenta)
-    synthwaveGridOpacity: 0.25,         // Increased base opacity
-    synthwaveGridPulseIntensity: 0.6,   // How bright the pulse gets (0-1)
+    synthwaveGridBaseHue: 190,           // Starting hue (cyan/tron blue)
+    synthwaveGridOpacity: 0.25,          // Base opacity
+    synthwaveGridPulseIntensity: 0.6,    // How bright the pulse gets (0-1)
+    synthwaveGridPulseDecay: 0.995,      // Very slow fade (closer to 1 = slower)
+    synthwaveGridColorCycleSpeed: 0.05,  // Faster color shift (5x faster)
 
     // ==================== NEW: Hand Tracking Overlay ====================
     handTrackingEnabled: true,
@@ -445,6 +447,7 @@ class SynthwaveGrid {
     constructor() {
         this.gridOffset = 0;
         this.pulseIntensity = 0;
+        this.colorPhase = 0;  // For color cycling
     }
 
     pulse(velocity) {
@@ -463,8 +466,17 @@ class SynthwaveGrid {
         // Animate grid moving towards viewer
         this.gridOffset = (this.gridOffset + CONFIG.synthwaveGridSpeed) % 50;
 
-        // Fade pulse more slowly for dramatic effect
-        this.pulseIntensity *= 0.92;
+        // Slowly cycle color phase
+        this.colorPhase += CONFIG.synthwaveGridColorCycleSpeed;
+        if (this.colorPhase > 360) this.colorPhase -= 360;
+
+        // Fade pulse much more slowly for dramatic, lingering effect
+        this.pulseIntensity *= CONFIG.synthwaveGridPulseDecay;
+
+        // Calculate current color - slowly shifting hue
+        const currentHue = (CONFIG.synthwaveGridBaseHue + this.colorPhase) % 360;
+        const gridColor = `hsl(${currentHue}, 100%, 60%)`;
+        const glowColor = `hsl(${currentHue}, 100%, 70%)`;
 
         const baseOpacity = CONFIG.synthwaveGridOpacity;
         const pulseBoost = this.pulseIntensity * CONFIG.synthwaveGridPulseIntensity;
@@ -472,11 +484,11 @@ class SynthwaveGrid {
 
         // Enhanced: Add glow during pulse
         if (this.pulseIntensity > 0.1) {
-            ctx.shadowColor = CONFIG.synthwaveGridColor;
+            ctx.shadowColor = glowColor;
             ctx.shadowBlur = 15 * this.pulseIntensity;
         }
 
-        ctx.strokeStyle = CONFIG.synthwaveGridColor;
+        ctx.strokeStyle = gridColor;
         // Thicker lines during pulse
         ctx.lineWidth = 1 + this.pulseIntensity * 2;
 

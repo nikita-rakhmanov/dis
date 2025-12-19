@@ -19,6 +19,7 @@ class SimpleMIDITest:
     CC_REVERB = 91
     CC_CHORUS = 93
     CC_MODULATION = 1
+    CC_ARPEGGIATOR_RATE = 14  # Right hand Y controls arp rate
 
     def __init__(self, midi_port_name=None):
         """Initialize MIDI port."""
@@ -214,7 +215,8 @@ class SimpleMIDITest:
 
             print("\nResetting MIDI CC values...")
             for cc in [self.CC_FILTER_CUTOFF, self.CC_RESONANCE,
-                      self.CC_REVERB, self.CC_CHORUS, self.CC_MODULATION]:
+                      self.CC_REVERB, self.CC_CHORUS, self.CC_MODULATION,
+                      self.CC_ARPEGGIATOR_RATE]:
                 self.send_cc(cc, 0)
 
             self.midi_out.close()

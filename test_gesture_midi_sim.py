@@ -18,6 +18,7 @@ class SimulatedMIDITest:
     CC_REVERB = 91
     CC_CHORUS = 93
     CC_MODULATION = 1
+    CC_ARPEGGIATOR_RATE = 14  # Right hand Y controls arp rate
 
     def __init__(self, midi_port_name=None):
         """Initialize MIDI port."""
@@ -74,6 +75,9 @@ class SimulatedMIDITest:
         print("  R    : Rock On → Modulation MAX (CC 1 = 127)")
         print("  P    : Peace Sign → Modulation MID (CC 1 = 64)")
         print()
+        print("RIGHT HAND (Arp Rate):")
+        print("  Z/N  : Arp Rate Up/Down (CC 14) - simulates right hand Y")
+        print()
         print("AUTOMATION:")
         print("  S    : Start auto-sweep (all parameters)")
         print("  X    : Stop auto-sweep")
@@ -96,7 +100,8 @@ class SimulatedMIDITest:
             self.CC_REVERB: 32,
             self.CC_RESONANCE: 32,
             self.CC_CHORUS: 0,
-            self.CC_MODULATION: 0
+            self.CC_MODULATION: 0,
+            self.CC_ARPEGGIATOR_RATE: 64  # Middle position = normal arp rate
         }
 
         sweeping = False
@@ -127,7 +132,8 @@ class SimulatedMIDITest:
                   f"Reverb:{current_values[self.CC_REVERB]:3d} "
                   f"Res:{current_values[self.CC_RESONANCE]:3d} "
                   f"Chorus:{current_values[self.CC_CHORUS]:3d} "
-                  f"Mod:{current_values[self.CC_MODULATION]:3d}")
+                  f"Mod:{current_values[self.CC_MODULATION]:3d} "
+                  f"Arp:{current_values[self.CC_ARPEGGIATOR_RATE]:3d}")
 
         try:
             while True:
@@ -176,6 +182,20 @@ class SimulatedMIDITest:
                     elif cmd == 'P':
                         current_values[self.CC_MODULATION] = self.send_cc(self.CC_MODULATION, 64)
                         print(f"PEACE SIGN → Modulation MID (CC 1 = 64)")
+                        display_values()
+
+                    elif cmd == 'Z':
+                        # Increase arp rate (simulates hand moving UP)
+                        new_val = min(127, current_values[self.CC_ARPEGGIATOR_RATE] + 16)
+                        current_values[self.CC_ARPEGGIATOR_RATE] = self.send_cc(self.CC_ARPEGGIATOR_RATE, new_val)
+                        print(f"ARP RATE UP → CC 14 = {new_val} (right hand up = faster)")
+                        display_values()
+
+                    elif cmd == 'N':
+                        # Decrease arp rate (simulates hand moving DOWN)
+                        new_val = max(0, current_values[self.CC_ARPEGGIATOR_RATE] - 16)
+                        current_values[self.CC_ARPEGGIATOR_RATE] = self.send_cc(self.CC_ARPEGGIATOR_RATE, new_val)
+                        print(f"ARP RATE DOWN → CC 14 = {new_val} (right hand down = slower)")
                         display_values()
 
                     elif cmd == 'S':
@@ -234,7 +254,8 @@ class SimulatedMIDITest:
 
             print("\nResetting MIDI CC values...")
             for cc in [self.CC_FILTER_CUTOFF, self.CC_RESONANCE,
-                      self.CC_REVERB, self.CC_CHORUS, self.CC_MODULATION]:
+                      self.CC_REVERB, self.CC_CHORUS, self.CC_MODULATION,
+                      self.CC_ARPEGGIATOR_RATE]:
                 self.send_cc(cc, 0)
 
             self.midi_out.close()

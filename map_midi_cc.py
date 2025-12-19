@@ -20,6 +20,7 @@ class MappingAssistant:
     CC_REVERB = 91
     CC_CHORUS = 93
     CC_MODULATION = 1
+    CC_ARPEGGIATOR_RATE = 14  # Right hand Y controls arp rate
 
     def __init__(self, midi_port_name=None):
         """Initialize MIDI port."""
@@ -125,6 +126,8 @@ class MappingAssistant:
              "Map this to: Chorus → Dry/Wet"),
             (self.CC_MODULATION, "Modulation",
              "Map this to: Any modulation effect (optional)"),
+            (self.CC_ARPEGGIATOR_RATE, "Arpeggiator Rate",
+             "Map this to: Arpeggiator → Rate (right hand Y control)"),
         ]
 
         for i, (cc_num, cc_name, suggestion) in enumerate(mappings, 1):
@@ -169,6 +172,7 @@ class MappingAssistant:
         print("  3. CC 91 - Reverb/Delay Level")
         print("  4. CC 93 - Chorus Amount")
         print("  5. CC  1 - Modulation")
+        print("  6. CC 14 - Arpeggiator Rate (Right Hand)")
         print("\n  W. Run full wizard")
         print("  Q. Quit")
         print("="*70)
@@ -179,6 +183,7 @@ class MappingAssistant:
             '3': (self.CC_REVERB, "Reverb/Delay"),
             '4': (self.CC_CHORUS, "Chorus Amount"),
             '5': (self.CC_MODULATION, "Modulation"),
+            '6': (self.CC_ARPEGGIATOR_RATE, "Arpeggiator Rate"),
         }
 
         while True:
@@ -198,7 +203,8 @@ class MappingAssistant:
         # Reset all CCs
         print("\nResetting all CC values to 0...")
         for cc in [self.CC_FILTER_CUTOFF, self.CC_RESONANCE,
-                   self.CC_REVERB, self.CC_CHORUS, self.CC_MODULATION]:
+                   self.CC_REVERB, self.CC_CHORUS, self.CC_MODULATION,
+                   self.CC_ARPEGGIATOR_RATE]:
             self.send_cc(cc, 0)
 
         self.midi_out.close()
