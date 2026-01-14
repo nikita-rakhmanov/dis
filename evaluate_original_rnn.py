@@ -28,8 +28,8 @@ def train_and_plot():
     print("Original Model Fast Evaluation Demo")
     print("="*60)
     
-    # 1. Setup Data
-    data_dir = pathlib.Path('data/maestro-v2_extracted') # Uses v2
+    # 1. Setup Data (TensorFlow extracts to maestro-v2.0.0, not maestro-v2_extracted)
+    data_dir = pathlib.Path('data/maestro-v2.0.0')
     original_train.download_dataset(data_dir)
     
     filenames = glob.glob(str(data_dir / '**/*.mid*'), recursive=True)
