@@ -13,6 +13,7 @@ Features:
    - Pitch: Normalized 0-1.
    - Time: Log1p scaled and Normalized by dataset max.
 5. Pipeline: tf.data Generator (Memory Efficient).
+6. GPU Optimization: Mixed precision for L4/Tensor Cores.
 """
 
 import collections
@@ -25,11 +26,16 @@ import random
 import os
 import json
 
+# Enable mixed precision for faster training on L4 GPU (uses Tensor Cores)
+from tensorflow.keras import mixed_precision
+mixed_precision.set_global_policy('mixed_float16')
+print("Mixed precision enabled: float16 compute, float32 variables")
+
 # Constants
 SEED = 42
 SEQUENCE_LENGTH = 50
 VOCAB_SIZE = 128
-BATCH_SIZE = 128
+BATCH_SIZE = 256  # Increased for L4 GPU (24GB VRAM)
 EPOCHS = 30
 LEARNING_RATE = 0.002
 NUM_TRAINING_FILES = 1200
