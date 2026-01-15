@@ -366,9 +366,31 @@ def main():
     model = build_improved_model((SEQUENCE_LENGTH, 2))
     model.summary()
     
+    # Custom callback to log checkpoint saves
+    class CheckpointLogger(tf.keras.callbacks.Callback):
+        def __init__(self):
+            super().__init__()
+            self.best_val_loss = float('inf')
+            self.best_epoch = 0
+            
+        def on_epoch_end(self, epoch, logs=None):
+            val_loss = logs.get('val_loss', float('inf'))
+            if val_loss < self.best_val_loss:
+                self.best_val_loss = val_loss
+                self.best_epoch = epoch + 1
+                print(f"\n✓ New best model saved at epoch {self.best_epoch} (val_loss: {val_loss:.4f})")
+    
+    checkpoint_logger = CheckpointLogger()
+    
     callbacks = [
-        tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True),
-        tf.keras.callbacks.ModelCheckpoint('improved_melody_model.keras', save_best_only=True)
+        tf.keras.callbacks.EarlyStopping(
+            monitor='val_loss', 
+            patience=5, 
+            restore_best_weights=True,
+            verbose=1  # Will print when early stopping triggers
+        ),
+        tf.keras.callbacks.ModelCheckpoint('improved_melody_model.keras', save_best_only=True, verbose=1),
+        checkpoint_logger
     ]
     
     print("\nStarting Training...")

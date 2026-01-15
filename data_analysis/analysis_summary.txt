@@ -1,0 +1,11 @@
+MELODY DATA ANALYSIS SUMMARY
+========================================
+
+Files analyzed: 200
+Total notes: 442949
+
+Pitch range: 21-108
+90% range: 48-89 (42 pitches)
+
+Interval range: -74 to 74
+90% interval range: -21 to 21 (43 values)
