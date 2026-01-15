@@ -1,0 +1,15 @@
+# GPU Cluster Dependencies
+# These packages are NOT included in the TensorFlow NGC container
+# TensorFlow, numpy, and other core packages are already in the container
+
+pandas>=2.0.0
+matplotlib>=3.7.0
+pretty_midi>=0.2.10
+mido>=1.3.0
+
+# Note: The following are in requirements.txt but NOT needed for training:
+# - seaborn (visualization only)
+# - python-rtmidi (MIDI output, not needed for training)
+# - opencv-python (gesture control)
+# - mediapipe (gesture control)
+# - websockets (web interface)

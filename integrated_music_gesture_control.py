@@ -168,7 +168,7 @@ class IntegratedMusicGestureSystem:
 
     def __init__(self, model_path, midi_port_name=None, enable_websocket=True,
                  ws_port=8765, enable_gesture=True, enable_polyphony=False,
-                 harmony_style='classical'):
+                 harmony_style='classical', harmony_mode='simple', harmony_model_path=None):
         """
         Initialize the integrated system.
 
@@ -180,6 +180,8 @@ class IntegratedMusicGestureSystem:
             enable_gesture: Enable gesture control
             enable_polyphony: Enable dual-model polyphony (2-voice)
             harmony_style: Harmony style for polyphony ('classical', 'jazz', 'modern')
+            harmony_mode: Harmony generation mode ('simple', 'learned')
+            harmony_model_path: Path to trained harmony model
         """
         # Load model
         print(f"Loading model from {model_path}...")
@@ -226,10 +228,11 @@ class IntegratedMusicGestureSystem:
         if self.enable_polyphony:
             self.polyphony_system = DualModelPolyphonySystem(
                 melody_generator=self,
-                harmony_mode='simple',  # Start with rule-based
+                harmony_mode=harmony_mode,
+                harmony_model_path=harmony_model_path,
                 harmony_style=harmony_style
             )
-            print(f"✓ Polyphony enabled (2-voice, {harmony_style} style)\n")
+            print(f"✓ Polyphony enabled (2-voice, Mode: {harmony_mode}, Style: {harmony_style})\n")
 
     def _setup_midi(self, port_name):
         """Setup MIDI output port."""
@@ -726,7 +729,16 @@ def main():
                        choices=['classical', 'jazz', 'modern'],
                        help='Harmony style for polyphony mode')
 
+    parser.add_argument('--harmony-mode', default='simple',
+                       choices=['simple', 'learned'],
+                       help="Harmony generation mode: 'simple' (rule-based) or 'learned' (neural network)")
+    parser.add_argument('--harmony-model', default='harmony_model.keras',
+                       help='Path to trained harmony model (for learned mode)')
+
     args = parser.parse_args()
+
+    # Auto-switch to learned mode if model exists and mode not explicitly set (optional, but safer to be explicit)
+    # For now, we respect the default 'simple' unless user changes it.
 
     system = IntegratedMusicGestureSystem(
         args.model,
@@ -735,7 +747,9 @@ def main():
         ws_port=args.ws_port,
         enable_gesture=not args.no_gesture,
         enable_polyphony=args.polyphony,
-        harmony_style=args.harmony_style
+        harmony_style=args.harmony_style,
+        harmony_mode=args.harmony_mode,
+        harmony_model_path=args.harmony_model
     )
 
     system.load_seed_sequence(args.seed)
