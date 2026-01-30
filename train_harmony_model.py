@@ -64,7 +64,7 @@ def extract_melody_harmony_pairs(midi_file):
         print(f"Warning: Could not parse {midi_file}: {e}")
         return [], []
 
-    # Combine all notes from all instruments (usually piano solo in MAESTRO)
+    # Combine all notes from all instruments
     all_notes = []
     for instrument in pm.instruments:
         all_notes.extend(instrument.notes)
@@ -116,11 +116,7 @@ def extract_melody_harmony_pairs(midi_file):
         ]
         
         if harmony_notes:
-            # We have harmony! Create a training example
-            
             # Prepare context
-            # We need 10 items. If fewer, pad with zeros.
-            # Flatten: [p, s, d, p, s, d...]
             context_flat = np.array(melody_history[-CONTEXT_LENGTH:]).flatten()
             
             # Pad if needed

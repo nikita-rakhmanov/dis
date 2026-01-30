@@ -79,14 +79,6 @@ def onset_biased_skyline(pm):
     
     if not all_notes:
         return []
-
-    # Events: (time, type, pitch, id)
-    # Types: 0=End, 1=Start (Start processed AFTER End if times equal, to handle legato)
-    # wait, if legato (end==start), we want start to register. 
-    # Sorting: Time asc. If time equal: End before Start? 
-    # If end happens at T and start happens at T. 
-    # If we process End first: note acts removed. Then Start adds new note.
-    # This seems correct for monophonic extraction.
     
     events = []
     for i, note in enumerate(all_notes):
@@ -105,14 +97,7 @@ def onset_biased_skyline(pm):
     # Skyline Bias Window
     # We apply bias for a short duration after onset
     bias_duration = 0.05 # 50ms (or just apply to the "latest" note?)
-    # Alternative strategy: "The note that started most recently" gets a bonus?
-    # Common Skyline algo: Pitch + V(t). V(t) decays?
-    
-    # Simple Onset Bias:
-    # We just track "active notes". The most recent onset gets a virtual pitch boost.
-    # But for how long? 
-    # Let's stick to a simpler interpretation: "Latest Onset wins if pitch is close enough"
-    # Or: "score = pitch + 12 if (time - note.start < 0.1) else pitch"
+
     
     def get_effective_pitch(note_info, current_time):
         is_onset = (current_time - note_info['start']) < 0.1 # 100ms window
@@ -290,7 +275,7 @@ def build_improved_model(input_shape):
 
 def main():
     print("="*60)
-    print("Improved Melody Training (Expert Refactor)")
+    print("Improved Melody Training")
     print("="*60)
     
     data_dir = pathlib.Path('data/maestro-v3.0.0')
@@ -340,9 +325,6 @@ def main():
     dataset = dataset.batch(BATCH_SIZE)
     dataset = dataset.prefetch(tf.data.AUTOTUNE)
     
-    # Validation split approach (approximate)
-    # Since we stream, simpler to just train on all or split filenames manually.
-    # We'll split filenames for robustness.
     val_split_idx = int(len(train_files) * 0.9)
     val_files = train_files[val_split_idx:]
     train_files_final = train_files[:val_split_idx]
@@ -402,7 +384,6 @@ def main():
     )
     
     # 5. Save Seed
-    # Need to fetch one batch
     for batch_x, _ in train_ds.take(1):
         seed_seq = batch_x[0].numpy()
         np.save('improved_seed_sequence.npy', seed_seq)

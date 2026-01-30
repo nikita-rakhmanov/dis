@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
 Train an RNN to generate music from MIDI files.
-Based on TensorFlow's music generation tutorial.
 """
 
 import collections

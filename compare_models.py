@@ -2,7 +2,7 @@
 """
 Unified Model Comparison Script.
 
-Compares the Original RNN (pitch/step/duration) with the Improved RNN (pitch/time).
+Compares the Original RNN (pitch/step/duration) with the V2 RNN (pitch/time).
 Generates samples from both and computes comparable metrics.
 
 Usage:

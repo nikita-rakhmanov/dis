@@ -1,317 +1,472 @@
 # AI Music Generation with Gesture Control
 
-A real-time music generation and performance system combining RNN-based MIDI generation with hand gesture recognition for effects control.
+A real-time music generation and performance system combining RNN-based MIDI generation with hand gesture recognition for expressive control of audio effects.
 
-## Features
+**Repository:** https://github.com/nikita-rakhmanov/dis
 
-### Music Generation
-- Real-time MIDI note generation using trained RNN model
-- Configurable temperature, velocity, and timing parameters
-- Supports any MIDI-compatible DAW (Ableton Live, Logic Pro, FL Studio, etc.)
-- Virtual MIDI port creation for easy routing
+---
 
-### Gesture Control
-- Hand tracking using MediaPipe
-- Real-time gesture recognition (Open Palm, Closed Fist, Peace Sign, Rock On, etc.)
-- Gesture-to-MIDI CC mapping for effects control
-- Smooth, low-latency control of audio effects
+## Table of Contents
 
-### Integrated System
-- Simultaneous operation of music generation and gesture control
-- Thread-safe MIDI port sharing between both systems
-- Dual-track routing: notes to instrument, CC to effects
-- Optional WebSocket-based 3D visualization
+1. [System Requirements](#1-system-requirements)
+2. [Installation](#2-installation)
+3. [Project Structure](#3-project-structure)
+4. [Quick Start Guide](#4-quick-start-guide)
+5. [Training Your Own Model](#5-training-your-own-model)
+6. [Running the Application](#6-running-the-application)
+7. [DAW Configuration](#7-daw-configuration)
+8. [Gesture Controls Reference](#8-gesture-controls-reference)
+9. [Command Line Options](#9-command-line-options)
+10. [Troubleshooting](#10-troubleshooting)
+11. [Advanced Configuration](#11-advanced-configuration)
 
-## Project Structure
+---
 
+## 1. System Requirements
+
+### Hardware
+- **CPU:** Modern multi-core processor (Intel i5/AMD Ryzen 5 or better recommended)
+- **RAM:** 8GB minimum, 16GB recommended
+- **Webcam:** Any USB webcam or built-in camera (required for gesture control)
+- **Audio Interface:** Optional but recommended for low-latency audio
+
+### Software
+- **Operating System:** macOS 10.15+, Windows 10+, or Linux (Ubuntu 20.04+)
+- **Python:** Version 3.8 or higher
+- **DAW:** Any MIDI-compatible DAW:
+  - Ableton Live (recommended)
+  - Logic Pro
+  - FL Studio
+  - Reaper
+  - Any other DAW with MIDI input support
+
+### MIDI Setup
+- **macOS:** IAC Driver (built-in, needs to be enabled in Audio MIDI Setup)
+- **Windows:** loopMIDI (free virtual MIDI driver) or similar
+- **Linux:** ALSA MIDI or JACK
+
+---
+
+## 2. Installation
+
+### Step 1: Clone or Extract the Project
+
+If you have the zip file:
+```bash
+unzip submission.zip -d ai-music-gesture
+cd ai-music-gesture
 ```
-dis/
-├── integrated_music_gesture_control.py  # Main integrated system
-├── realtime_midi_generator.py           # Standalone MIDI generator
-├── train_music_rnn.py                   # Model training script
-├── test_gesture_midi.py                 # Test gesture control (webcam)
-├── test_gesture_midi_sim.py             # Test MIDI CC (no webcam)
-├── gesture_control/                     # Gesture recognition module
-├── docs/                                # Technical documentation
-├── GESTURE_CONTROL_GUIDE.md             # DAW setup guide
-├── ABLETON_MAPPING_GUIDE.md             # Ableton-specific guide
-├── QUICK_ABLETON_SETUP.md               # Quick Ableton setup
-├── SETUP_LOCAL_MACHINE.md               # Local machine setup
-├── requirements.txt                     # Python dependencies
-└── README.md                            # This file
+
+Or clone from GitHub:
+```bash
+git clone https://github.com/nikita-rakhmanov/dis.git
+cd dis
 ```
 
-## Installation
+### Step 2: Create a Virtual Environment (Recommended)
 
-### Prerequisites
+```bash
+python3 -m venv venv
+source venv/bin/activate  # macOS/Linux
+# or
+venv\Scripts\activate     # Windows
+```
 
-- Python 3.8+
-- Webcam (for gesture control)
-- DAW with MIDI support (Ableton Live, Logic Pro, FL Studio, Reaper, etc.)
-
-### Install Dependencies
+### Step 3: Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Key dependencies:
-- tensorflow - RNN model
-- mido + python-rtmidi - MIDI I/O
-- mediapipe - Hand tracking
-- opencv-python - Video capture
-- websockets - Real-time visualization
+This installs the following key packages:
+| Package | Version | Purpose |
+|---------|---------|---------|
+| tensorflow | ≥2.13.0 | Neural network framework for RNN model |
+| numpy | ≥1.24.0 | Numerical computing |
+| mido | ≥1.3.0 | MIDI message handling |
+| python-rtmidi | ≥1.5.0 | Real-time MIDI I/O |
+| mediapipe | ≥0.10.0 | Hand tracking (Google) |
+| opencv-python | ≥4.8.0 | Video capture and processing |
+| websockets | ≥11.0.0 | Real-time visualization server |
+| pretty_midi | ≥0.2.10 | MIDI file parsing (for training) |
 
-## Quick Start
+### Step 4: Verify Installation
 
-### 1. Train the Model (Optional)
+```bash
+python -c "import tensorflow as tf; import mido; import mediapipe; print('All dependencies installed successfully!')"
+```
 
-If you want to train your own model:
+---
+
+## 3. Project Structure
+
+```
+dis/
+├── integrated_music_gesture_control.py  # Main application (run this)
+├── train_music_rnn.py                   # Model training script
+├── train_improved_rnn.py                # Improved model training
+├── dual_model_polyphony.py              # Two-voice polyphony system
+│
+├── gesture_control/                     # Gesture recognition module
+│   ├── __init__.py
+│   └── hand_tracker.py                  # MediaPipe hand tracking
+│
+├── music_rnn_model.keras                # Pre-trained melody model
+├── improved_melody_model.keras          # Improved melody model
+├── harmony_model.keras                  # Harmony generation model
+├── seed_sequence.npy                    # Initial sequence for generation
+│
+├── visualization.html                   # 3D WebGL visualization
+├── visualization.js                     # Visualization logic
+├── visualization.css                    # Visualization styles
+│
+├── docs/                                # Additional documentation
+│   ├── ABLETON_MAPPING_GUIDE.md        # Detailed Ableton setup
+│   ├── GESTURE_CONTROL_GUIDE.md        # DAW configuration guide
+│   └── GETTING_STARTED.md              # Quick start guide
+│
+├── requirements.txt                     # Python dependencies
+└── README.md                            # This user manual
+```
+
+---
+
+## 4. Quick Start Guide
+
+### Step 1: Set Up Virtual MIDI (First Time Only)
+
+**macOS:**
+1. Open **Audio MIDI Setup** (Applications → Utilities)
+2. Go to **Window → Show MIDI Studio**
+3. Double-click **IAC Driver**
+4. Check **Device is online**
+5. Add a port named "IAC Driver Bus 1"
+
+**Windows:**
+1. Download and install [loopMIDI](https://www.tobias-erichsen.de/software/loopmidi.html)
+2. Create a new virtual MIDI port
+
+### Step 2: Run the Application
+
+```bash
+python integrated_music_gesture_control.py
+```
+
+### Step 3: Select MIDI Port
+
+The application will display available MIDI ports:
+```
+Available MIDI ports:
+  [0] IAC Driver Bus 1
+  [1] USB MIDI Device
+
+Select port number (or press Enter to create virtual):
+```
+
+Enter the number of your virtual MIDI port (e.g., `0`).
+
+### Step 4: Configure Your DAW
+
+1. Open your DAW
+2. Create a MIDI track
+3. Set MIDI input to the virtual port (e.g., "IAC Driver Bus 1" or "RNN Music Generator")
+4. Add an instrument (synth, piano, etc.)
+5. Arm the track for recording
+
+### Step 5: Start Performing!
+
+- The RNN will generate MIDI notes automatically
+- Move your hands in front of the webcam to control effects
+- Press `Ctrl+C` to stop
+
+---
+
+## 5. Training Your Own Model
+
+Pre-trained models are included, but you can train your own:
+
+### Step 1: Download Training Data
+
+The training script automatically downloads the MAESTRO dataset (classical piano MIDI):
 
 ```bash
 python train_music_rnn.py
 ```
 
-This will create `music_rnn_model.keras` and `seed_sequence.npy`.
+### Step 2: Training Process
 
-### 2. Test Gesture Control
+Training parameters (in `train_music_rnn.py`):
+- **EPOCHS:** 50 (default)
+- **BATCH_SIZE:** 256
+- **SEQUENCE_LENGTH:** 50 notes
+- **NUM_TRAINING_FILES:** 1000 MIDI files
 
-Before running the full system, test that gesture control works:
+Training outputs:
+- `music_rnn_model.keras` - The trained model
+- `seed_sequence.npy` - Initial sequence for generation
+- `training_checkpoints/` - Checkpoint weights
 
-```bash
-python test_gesture_midi.py
-```
+### Step 3: Monitor Training
 
-Move your hand in front of the webcam and observe:
-- **X movement** (left-right) → Filter Cutoff (CC 74)
-- **Y movement** (up-down) → Reverb Level (CC 91)
-- **Pinch gesture** → Resonance (CC 71)
-- **Open Palm** → Chorus Max
-- **Closed Fist** → Effects Off
+Training progress is displayed in the terminal. Checkpoints are saved after each epoch.
 
-### 3. Run Integrated System
+---
 
-Launch both music generation and gesture control:
+## 6. Running the Application
 
-```bash
-python integrated_music_gesture_control.py --model music_rnn_model.keras
-```
-
-You'll see:
-1. MIDI port selection menu
-2. Music generation starting
-3. Gesture control window opening
-4. Real-time note generation with gesture control active
-
-### 4. Setup Your DAW
-
-For Ableton Live: See [ABLETON_MAPPING_GUIDE.md](ABLETON_MAPPING_GUIDE.md)
-For other DAWs: See [GESTURE_CONTROL_GUIDE.md](GESTURE_CONTROL_GUIDE.md)
-
-Quick setup:
-1. Create two MIDI tracks in your DAW
-2. Track 1: Route to instrument (receives notes)
-3. Track 2: Route CC to effects (receives control messages)
-4. Add Audio Effects Rack with:
-   - Low Pass Filter (map Frequency to CC 74, Resonance to CC 71)
-   - Reverb/Delay (map Wet/Dry to CC 91)
-   - Chorus (map Amount to CC 93)
-
-## Usage Examples
-
-### Full System (Music + Gestures)
+### Basic Usage
 
 ```bash
-# Default settings
+# Run with default settings
 python integrated_music_gesture_control.py
 
-# Custom temperature and velocity
-python integrated_music_gesture_control.py --temperature 1.5 --velocity 100
+# Run with specific model
+python integrated_music_gesture_control.py --model improved_melody_model.keras
 
-# Specific MIDI port
-python integrated_music_gesture_control.py --port "IAC Driver Bus 1"
-
-# Disable visualization (lower CPU usage)
-python integrated_music_gesture_control.py --no-visualization
-```
-
-### Music Generation Only (No Gestures)
-
-```bash
+# Run without gesture control (music only)
 python integrated_music_gesture_control.py --no-gesture
-# Or use the original script
-python realtime_midi_generator.py
+
+# Run with custom settings
+python integrated_music_gesture_control.py --temperature 1.5 --velocity 100
 ```
 
-### Gesture Control Only (No Music Generation)
+### With Polyphony (Two Voices)
 
 ```bash
-python test_gesture_midi.py
+python integrated_music_gesture_control.py --polyphony --harmony-style classical
 ```
 
-## MIDI CC Mappings
+Harmony styles: `classical`, `jazz`, `modern`
 
-The gesture control system sends the following MIDI CC messages:
+### With 3D Visualization
 
-### Left Hand (MIDI Effects)
-| Gesture/Movement | CC# | Parameter | Value Range |
-|------------------|-----|-----------|-------------|
-| Hand X Position (center peak) | 74 | Filter Cutoff | 0-127 |
-| Hand Y Position | 91 | Reverb/Delay | 0-127 |
-| Thumb-Index Distance | 71 | Resonance | 0-127 |
-| Open Palm | 93 | Chorus | 127 |
-| Closed Fist | 93, 1 | Chorus, Mod | 0 |
-| Peace Sign | 1 | Modulation | 64 |
-| Rock On | 1 | Modulation | 127 |
+1. Run the application (WebSocket server starts automatically)
+2. Open `visualization.html` in a web browser
+3. Notes appear as 3D objects in real-time
 
-### Right Hand (Tempo + Arpeggiator)
-| Gesture/Movement | CC# | Parameter | Value Range |
-|------------------|-----|-----------|-------------|
-| Hand Y Position (up) | 14 | Arpeggiator Rate | 127 (fastest) |
-| Hand Y Position (middle) | 14 | Arpeggiator Rate | 64 |
-| Hand Y Position (down) | 14 | Arpeggiator Rate | 0 (slowest) |
+---
 
-## Command Line Options
+## 7. DAW Configuration
 
-### integrated_music_gesture_control.py
+### Ableton Live Setup
+
+#### Track Structure
+Create two tracks:
+
+| Track | Type | Purpose |
+|-------|------|---------|
+| Track 1 | MIDI | Receives notes → Instrument |
+| Track 2 | Audio | Audio effects processing |
+
+#### MIDI Configuration
+1. **Preferences → Link/Tempo/MIDI**
+2. Enable **Track** and **Remote** for your MIDI port
+3. Set Track 1 MIDI Input to your virtual port
+4. Set Monitor to "In"
+
+#### Effects Mapping (MIDI Learn)
+1. Add effects to Track 2: Auto Filter, Reverb, Chorus
+2. Press `Cmd+M` (Mac) or `Ctrl+M` (Win) for MIDI Map mode
+3. Click on effect parameter (e.g., Filter Frequency)
+4. Move your hand to send CC message
+5. Ableton automatically maps the CC
+6. Exit MIDI Map mode
+
+See [docs/ABLETON_MAPPING_GUIDE.md](docs/ABLETON_MAPPING_GUIDE.md) for detailed instructions.
+
+### Other DAWs
+
+| DAW | MIDI Learn Method |
+|-----|-------------------|
+| Logic Pro | Smart Controls → Learn |
+| FL Studio | Right-click parameter → Link to Controller |
+| Reaper | Actions → Show Action List → Learn |
+| Studio One | Right-click → Assign MIDI Control |
+
+---
+
+## 8. Gesture Controls Reference
+
+### Left Hand: Audio Effects Control
+
+| Movement/Gesture | MIDI CC | Effect | Behavior |
+|------------------|---------|--------|----------|
+| X position (left-right) | CC 74 | Filter Cutoff | Center = bright, edges = dark |
+| Y position (up-down) | CC 91 | Reverb/Delay | Up = more reverb |
+| Thumb-index pinch | CC 71 | Resonance | Pinch = high resonance |
+| Open Palm | CC 93 | Chorus | Maximum (127) |
+| Closed Fist | CC 93, CC 1 | Bypass | Minimum (0) |
+| Peace Sign ✌️ | CC 1 | Modulation | Medium (64) |
+
+### Right Hand: Tempo/Arpeggiator Control
+
+| Movement | MIDI CC | Effect | Behavior |
+|----------|---------|--------|----------|
+| Y position (up) | CC 14 | Arpeggiator Rate | Fast (127) |
+| Y position (middle) | CC 14 | Arpeggiator Rate | Normal (64) |
+| Y position (down) | CC 14 | Arpeggiator Rate | Slow (0) |
+
+### Gestures Visual Guide
 
 ```
---model PATH              Path to trained model (default: music_rnn_model.keras)
---seed PATH               Path to seed sequence (default: seed_sequence.npy)
---port NAME               MIDI port name (interactive if not specified)
---temperature FLOAT       Sampling temperature (default: 2.0)
---velocity INT            MIDI velocity 0-127 (default: 80)
---num-notes INT           Number of notes to generate (infinite if not set)
---min-duration FLOAT      Minimum note duration in seconds (default: 0.1)
---max-duration FLOAT      Maximum note duration in seconds (default: 2.0)
---no-visualization        Disable WebSocket server
---no-gesture              Disable gesture control
---ws-port INT             WebSocket port (default: 8765)
+Open Palm (5 fingers)     Closed Fist (0 fingers)    Peace Sign (2 fingers)
+    🖐️                         ✊                         ✌️
+ Chorus ON               Effects OFF               Modulation Mid
+
+Rock On (2 fingers)      Pointing (1 finger)        Pinch (thumb+index)
+    🤘                         👆                         🤏
+Modulation Max            (reserved)                Resonance
 ```
 
-## System Architecture
+---
+
+## 9. Command Line Options
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│         Integrated Music Gesture System                 │
-│                                                         │
-│  ┌──────────────┐              ┌──────────────┐       │
-│  │ RNN Generator│              │ Hand Tracker │       │
-│  │ (Main Thread)│              │   (Thread)   │       │
-│  └──────┬───────┘              └──────┬───────┘       │
-│         │                             │                │
-│         │ MIDI Notes                  │ MIDI CC        │
-│         │ (Note On/Off)               │ (74,71,91,93)  │
-│         └──────────┬────────────────┬─┘                │
-│                    │                │                  │
-│                    ▼                ▼                  │
-│              ┌──────────────────────┐                  │
-│              │   Shared MIDI Port   │                  │
-│              │  (Thread-Safe Lock)  │                  │
-│              └──────────┬───────────┘                  │
-└─────────────────────────┼───────────────────────────────┘
-                          │
-                          ▼
-                    ┌──────────┐
-                    │   DAW    │
-                    ├──────────┤
-                    │ Track 1: │──► Instrument (Notes)
-                    │ Notes    │
-                    │          │
-                    │ Track 2: │──► Effects Rack (CC)
-                    │ CC       │    - Filter
-                    │          │    - Reverb
-                    │          │    - Chorus
-                    └──────────┘
+python integrated_music_gesture_control.py [OPTIONS]
+
+Model Options:
+  --model PATH              Path to trained model (default: music_rnn_model.keras)
+  --seed PATH               Path to seed sequence (default: seed_sequence.npy)
+
+MIDI Options:
+  --port NAME               MIDI port name (interactive if not specified)
+
+Generation Options:
+  --temperature FLOAT       Sampling randomness 0.1-3.0 (default: 2.0)
+  --velocity INT            Note velocity 0-127 (default: 80)
+  --num-notes INT           Notes to generate (default: infinite)
+  --min-duration FLOAT      Min note length in seconds (default: 0.1)
+  --max-duration FLOAT      Max note length in seconds (default: 2.0)
+
+Feature Toggles:
+  --no-gesture              Disable gesture control
+  --no-visualization        Disable WebSocket server
+
+Polyphony Options:
+  --polyphony               Enable two-voice generation
+  --harmony-style STYLE     classical, jazz, or modern (default: classical)
+  --harmony-mode MODE       simple or learned (default: simple)
+
+Visualization:
+  --ws-port INT             WebSocket port (default: 8765)
 ```
 
-## Performance Tips
+### Examples
 
-### Latency Optimization
-- Use low-latency mode in your DAW
-- Set audio buffer to 128-256 samples
-- Reduce `update_rate` in code if needed (default: 20Hz)
+```bash
+# Slow, expressive generation
+python integrated_music_gesture_control.py --temperature 0.8 --velocity 60
 
-### CPU Optimization
-- Disable visualization with `--no-visualization`
-- Reduce webcam resolution (default: 640x480)
-- Lower gesture control update rate
+# Fast, energetic generation
+python integrated_music_gesture_control.py --temperature 2.5 --velocity 110
 
-### Hand Tracking Quality
-- Ensure good lighting
-- Use plain background
-- Keep hand 1-2 feet from camera
-- Avoid shadows and backlighting
+# Jazz-style polyphony
+python integrated_music_gesture_control.py --polyphony --harmony-style jazz
 
-## Troubleshooting
+# Headless mode (no webcam needed)
+python integrated_music_gesture_control.py --no-gesture --no-visualization
+```
+
+---
+
+## 10. Troubleshooting
 
 ### "Could not open webcam"
-- Check webcam permissions
-- Verify device exists: `ls /dev/video*`
-- Try different camera index in code
+
+**Causes:**
+- No webcam connected
+- Webcam in use by another application
+- Permission denied
+
+**Solutions:**
+```bash
+# Check available cameras (Linux)
+ls /dev/video*
+
+# Run without gesture control
+python integrated_music_gesture_control.py --no-gesture
+```
+
+On macOS, check **System Preferences → Security & Privacy → Camera** permissions.
 
 ### "Hand not detected"
-- Improve lighting
-- Move hand closer to camera
-- Check MediaPipe confidence settings
+
+**Solutions:**
+- Ensure good lighting (avoid backlighting)
+- Use a plain background
+- Keep hand 30-60cm from camera
+- Avoid shadows on hands
 
 ### "MIDI port not found"
-- List ports: `python -c "import mido; print(mido.get_output_names())"`
-- Create IAC Driver (macOS) or loopMIDI (Windows)
-- Use virtual port option
+
+**Check available ports:**
+```bash
+python -c "import mido; print(mido.get_output_names())"
+```
+
+**Solutions:**
+- Enable IAC Driver (macOS) or install loopMIDI (Windows)
+- The application can create a virtual port if none exist
 
 ### "Effects not responding to gestures"
-- Verify MIDI CC messages with MIDI monitor
-- Check DAW MIDI routing
-- Ensure effects track is receiving CC from correct source
-- Try MIDI Learn mode in DAW
 
-### "Music playing but no gesture control"
-- Check webcam is not in use by other app
-- Verify gesture window opened
-- Check console for error messages
+**Checklist:**
+1. ✅ MIDI CC messages being sent (check with MIDI monitor app)
+2. ✅ DAW receiving from correct MIDI port
+3. ✅ Effects mapped to correct CC numbers
+4. ✅ Track is armed and monitoring is "In"
 
-## Advanced Customization
+### "Model fails to load"
 
-### Change CC Mappings
+**Solution:** Ensure TensorFlow version matches:
+```bash
+pip install tensorflow>=2.13.0
+```
+
+---
+
+## 11. Advanced Configuration
+
+### Changing CC Mappings
 
 Edit `integrated_music_gesture_control.py`:
 
 ```python
 class GestureMIDIController:
-    # Left hand effects (MIDI CC)
-    CC_FILTER_CUTOFF = 74  # Hand X position (center peak)
-    CC_RESONANCE = 71      # Thumb-index pinch distance
-    CC_REVERB = 91         # Hand Y position
-    CC_CHORUS = 93         # Open Palm/Closed Fist
-    CC_MODULATION = 1      # Gestures (Peace, Rock On)
-    CC_EXPRESSION = 11
-    
-    # Right hand control
-    CC_ARPEGGIATOR_RATE = 14  # Hand Y position (up=fast, down=slow)
+    CC_FILTER_CUTOFF = 74      # Change these values
+    CC_RESONANCE = 71          # to match your DAW
+    CC_REVERB = 91
+    CC_CHORUS = 93
+    CC_MODULATION = 1
+    CC_ARPEGGIATOR_RATE = 14
 ```
 
-### Adjust Smoothing
+### Adjusting Smoothing
 
-Increase buffer size for smoother control:
-
+For smoother control (less responsive):
 ```python
-self.position_buffer_x = deque(maxlen=10)  # Default: 5
+self.position_buffer_x = deque(maxlen=10)  # Increase from 5
 self.position_buffer_y = deque(maxlen=10)
 ```
 
-### Add Custom Gestures
+For faster response (more jittery):
+```python
+self.position_buffer_x = deque(maxlen=3)   # Decrease from 5
+```
 
-Edit `gesture_control/hand_tracker.py` to add new gesture recognition logic.
+### Custom Gestures
 
+Add new gesture recognition in `gesture_control/hand_tracker.py`:
 
-## Credits and Technologies
+```python
+def recognize_gesture(self, landmarks, handedness) -> str:
+    fingers = self.get_finger_state(landmarks, handedness)
+    
+    # Add your custom gesture
+    if fingers['thumb'] and fingers['pinky'] and not fingers['index']:
+        return "My Custom Gesture"
+```
 
-- **TensorFlow** - Neural network framework
-- **MediaPipe** - Hand tracking (Google)
-- **mido** - MIDI library for Python
-- **OpenCV** - Video capture and processing
-- **WebSockets** - Real-time visualization
-- **Three.js** - 3D graphics (visualization.html)
-
+---
 

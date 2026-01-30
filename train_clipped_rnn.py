@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
 """
 Train a Clipped-Vocabulary Melody RNN.
-
-Based on train_improved_rnn.py but with reduced vocabulary:
-- Pitch range: 48-89 (C3 to F6) = 42 classes instead of 128
-- Based on data analysis showing 90% of melody notes fall in this range
-
-This should make the pitch classification problem significantly easier.
 """
 
 import collections

@@ -20,7 +20,7 @@ def simulate_hand_movement(system, num_notes=50, cycle_duration=10.0):
     Hand position oscillates between top (fast) and bottom (slow).
     """
     print("\n" + "=" * 70)
-    print("🧪 TEMPO CONTROL TEST - Simulating hand movement")
+    print("TEMPO CONTROL TEST - Simulating hand movement")
     print("=" * 70)
     print(f"Hand position will cycle up/down over {cycle_duration}s")
     print("Watch the step/duration times change!")
@@ -56,7 +56,7 @@ def simulate_hand_movement(system, num_notes=50, cycle_duration=10.0):
             duration_adjusted = duration * speed
             
             # Display with hand position indicator
-            hand_indicator = "🔼" if y_position < 0.3 else ("🔽" if y_position > 0.7 else "➡️")
+            hand_indicator = "▲" if y_position < 0.3 else ("▼" if y_position > 0.7 else "→")
             note_name = system._pitch_to_name(pitch)
             
             print(f"♪ {count+1:3d}: {note_name:4s} | Hand Y: {y_position:.2f} {hand_indicator} | "

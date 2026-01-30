@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
 Quick test script for polyphony functionality.
-Tests the dual-model system without requiring MIDI hardware.
 """
 
 import numpy as np

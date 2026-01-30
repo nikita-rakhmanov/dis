@@ -80,7 +80,6 @@ class SimpleHarmonyGenerator:
 class LearnedHarmonyModel:
     """
     Neural network-based harmony generator (Model 2).
-    Will be trained on melody-harmony pairs from MIDI data.
     """
 
     def __init__(self, model_path: Optional[str] = None):
@@ -179,7 +178,45 @@ class LearnedHarmonyModel:
 
     def load_model(self, model_path: str):
         """Load pre-trained harmony model."""
-        self.model = tf.keras.models.load_model(model_path)
+        import os
+        
+        # weight file locations
+        weights_h5 = model_path.replace('.h5', '.weights.h5').replace('.keras', '.weights.h5')
+        weights_npz = 'harmony_model_weights.npz'
+        
+        try:
+            # First try direct load
+            self.model = tf.keras.models.load_model(model_path)
+        except (TypeError, ValueError) as e:
+            # Keras version mismatch - rebuild model and load weights
+            print(f"⚠ Direct model load failed, trying weights-only approach...")
+            
+            # Build fresh model with tf_keras compatible architecture
+            self.build_model(input_dim=33, vocab_size=128)
+            
+            # Try to load weights from .weights.h5 file
+            if os.path.exists(weights_h5):
+                try:
+                    self.model.load_weights(weights_h5)
+                    print(f"✓ Loaded weights from {weights_h5}")
+                    return
+                except Exception as we:
+                    print(f"⚠ Could not load .weights.h5: {we}")
+            
+            # Try numpy weights file
+            if os.path.exists(weights_npz):
+                try:
+                    weights_data = np.load(weights_npz)
+                    weights = [weights_data[f'arr_{i}'] for i in range(len(weights_data.files))]
+                    self.model.set_weights(weights)
+                    print(f"✓ Loaded weights from {weights_npz}")
+                    return
+                except Exception as we:
+                    print(f"⚠ Could not load .npz weights: {we}")
+            
+            # If no weights file, model is untrained - raise error to fall back to simple
+            self.model = None
+            raise
 
     def save_model(self, model_path: str):
         """Save trained harmony model."""
@@ -212,7 +249,12 @@ class DualModelPolyphonySystem:
         if harmony_mode == 'simple':
             self.harmony_gen = SimpleHarmonyGenerator(style=harmony_style)
         elif harmony_mode == 'learned':
-            self.harmony_gen = LearnedHarmonyModel(model_path=harmony_model_path)
+            try:
+                self.harmony_gen = LearnedHarmonyModel(model_path=harmony_model_path)
+            except (TypeError, Exception) as e:
+                print(f"Error loading learned harmony model: {e}")
+                self.harmony_gen = SimpleHarmonyGenerator(style=harmony_style)
+                self.harmony_mode = 'simple'
         else:
             raise ValueError(f"Unknown harmony_mode: {harmony_mode}")
 

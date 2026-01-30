@@ -9,9 +9,6 @@ Before you begin, ensure you have:
 - **Python 3.10, 3.11, or 3.12** installed (TensorFlow does not support Python 3.13 yet)
 - **Webcam** (required for gesture control)
 - **DAW** with MIDI support (Ableton Live, Logic Pro, FL Studio, Reaper, etc.)
-- **Git** (optional, for cloning the repository)
-
-> **⚠️ Important:** If you have Python 3.13 installed as your default, you must use `python3.12` (or 3.11/3.10) explicitly when creating the virtual environment. See Step 2 below.
 
 ---
 
@@ -215,27 +212,3 @@ Create a virtual MIDI port:
 - **Windows**: Use loopMIDI software
 
 ---
-
-## Quick Reference
-
-| Task | Command |
-|------|---------|
-| Activate venv (macOS/Linux) | `source venv/bin/activate` |
-| Activate venv (Windows) | `venv\Scripts\activate` |
-| Install dependencies | `pip install -r requirements.txt` |
-| Test hand tracking | `python gesture_control/hand_tracker.py` |
-| Test gesture MIDI | `python test_gesture_midi.py` |
-| Run full system | `python integrated_music_gesture_control.py` |
-| Train model | `python train_music_rnn.py` |
-| Deactivate venv | `deactivate` |
-
----
-
-## Additional Documentation
-
-- [README.md](README.md) - Full project documentation
-- [ABLETON_MAPPING_GUIDE.md](ABLETON_MAPPING_GUIDE.md) - Ableton Live setup
-- [POLYPHONY_GUIDE.md](POLYPHONY_GUIDE.md) - Polyphonic features
-- [docs/SETUP_LOCAL_MACHINE.md](docs/SETUP_LOCAL_MACHINE.md) - Local machine setup details
-- [docs/GPU_TRAINING_GUIDE.md](docs/GPU_TRAINING_GUIDE.md) - GPU training guide
-- [docs/VISUALIZATION_README.md](docs/VISUALIZATION_README.md) - 3D visualization setup

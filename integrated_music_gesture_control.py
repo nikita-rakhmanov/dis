@@ -46,7 +46,7 @@ class GestureMIDIController:
     CC_CHORUS = 93
     CC_MODULATION = 1
     CC_EXPRESSION = 11
-    CC_ARPEGGIATOR_RATE = 14  # For controlling Ableton arpeggiator rate
+    CC_ARPEGGIATOR_RATE = 14 
 
     def __init__(self, midi_out, update_rate=20):
         """
@@ -232,7 +232,7 @@ class IntegratedMusicGestureSystem:
                 harmony_model_path=harmony_model_path,
                 harmony_style=harmony_style
             )
-            print(f"✓ Polyphony enabled (2-voice, Mode: {harmony_mode}, Style: {harmony_style})\n")
+            print(f"Polyphony enabled\n")
 
     def _setup_midi(self, port_name):
         """Setup MIDI output port."""
@@ -586,9 +586,6 @@ class IntegratedMusicGestureSystem:
                     harmony_duration_base = harmony_duration * base_multiplier
                     
                     # Apply gesture-controlled speed on top of base
-                    # effective_speed: hand up (y=0) = 4x, middle = 1x, down = 0.25x
-                    # We DIVIDE by speed so: hand up = faster (shorter notes), hand down = slower (longer notes)
-                    # Base of 4s / effective_speed: 4s/4 = 1s (hand up), 4s/1 = 4s (middle), 4s/0.25 = 16s (hand down)
                     base_duration = 4.0  # 4 second baseline
                     duration_adjusted = base_duration / effective_speed
                     step_adjusted = step_base / effective_speed  # Step also scales with speed
@@ -732,13 +729,12 @@ def main():
     parser.add_argument('--harmony-mode', default='simple',
                        choices=['simple', 'learned'],
                        help="Harmony generation mode: 'simple' (rule-based) or 'learned' (neural network)")
-    parser.add_argument('--harmony-model', default='harmony_model.keras',
+    parser.add_argument('--harmony-model', default='harmony_model.h5',
                        help='Path to trained harmony model (for learned mode)')
 
     args = parser.parse_args()
 
-    # Auto-switch to learned mode if model exists and mode not explicitly set (optional, but safer to be explicit)
-    # For now, we respect the default 'simple' unless user changes it.
+    # Auto-switch to learned mode if model exists and mode not explicitly set
 
     system = IntegratedMusicGestureSystem(
         args.model,

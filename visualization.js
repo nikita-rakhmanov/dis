@@ -68,7 +68,7 @@ const CONFIG = {
     shakeDecay: 0.85,            // How fast shake fades (0.8 = fast, 0.95 = slow)
 
 
-    // Synthwave grid - TRON style with color cycling
+    // Synthwave grid
     synthwaveGridEnabled: true,
     synthwaveGridLines: 20,
     synthwaveGridSpeed: 0.5,
@@ -78,7 +78,6 @@ const CONFIG = {
     synthwaveGridPulseDecay: 0.995,      // Very slow fade (closer to 1 = slower)
     synthwaveGridColorCycleSpeed: 0.05,  // Faster color shift (5x faster)
 
-    // ==================== NEW: Hand Tracking Overlay ====================
     handTrackingEnabled: true,
     leftHandColor: '#00ffff',    // Cyan for left hand (effects)
     rightHandColor: '#ff8800',   // Orange for right hand (tempo)
@@ -527,7 +526,7 @@ class SynthwaveGrid {
     }
 }
 
-// ==================== NEW: Hand Tracking Overlay ====================
+// ==================== Hand Tracking Overlay ====================
 class HandTrackingOverlay {
     constructor() {
         this.leftHand = null;
@@ -672,7 +671,7 @@ class HandTrackingOverlay {
     }
 }
 
-// ==================== NEW: Start Gesture Overlay ====================
+// ==================== Start Gesture Overlay ====================
 class StartGestureOverlay {
     constructor() {
         this.isActive = CONFIG.startGestureRequired;
